@@ -1,25 +1,24 @@
-import { View, StyleSheet } from 'react-native';
-import ValueCard from '../src/components/ValueCard';
+import React from "react";
+import { View, StyleSheet } from "react-native";
+import ValueCard from "./src/components/Valuecard";
 
 export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <ValueCard
-        name="Sample Player"
-        position="OF"
-        team="NY"
-        careerWar={32.4}
-        seasonWar={4.1}
+        playerName="Juan Soto"
+        position="RF"
+        team="New York Mets"
+        careerWAR={36.8}
+        seasonWAR={5.2}
+        gamesPlayed={110}
+        trend="Rising"
+        mlbId={665742}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-  },
+  container: { flex: 1 },
 });

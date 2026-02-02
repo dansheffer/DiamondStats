@@ -1,6 +1,6 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native';
-import ValueCard from './src/components/valuecard';
+import ValueCard from './src/components/Valuecard';
 
 /**
  * Example usage of the ValueCard component with Mets theme and MLB headshot integration
