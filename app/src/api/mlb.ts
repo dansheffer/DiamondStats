@@ -213,16 +213,18 @@ export async function fetchStandings(): Promise<StandingRow[]> {
   const rows: StandingRow[] = [];
 
   records.forEach((record, divisionIndex) => {
-    const league = (record.league as Record<string, unknown> | undefined) ?? {};
-    const division = (record.division as Record<string, unknown> | undefined) ?? {};
-    const leagueName = String(league.name ?? 'League');
-    const rawDivisionName = String(division.name ?? 'Division');
-    const divisionName = rawDivisionName
-      .replace('American League ', 'AL ')
-      .replace('National League ', 'NL ');
     const teamRecords = (record.teamRecords as Array<Record<string, unknown>> | undefined) ?? [];
     teamRecords.forEach((teamRecord, idx) => {
       const team = (teamRecord.team as Record<string, unknown> | undefined) ?? {};
+
+      // League/division names live on the hydrated team object, not the record
+      const teamLeague = (team.league as Record<string, unknown> | undefined) ?? {};
+      const teamDivision = (team.division as Record<string, unknown> | undefined) ?? {};
+      const leagueName = String(teamLeague.name ?? 'League');
+      const rawDivisionName = String(teamDivision.name ?? 'Division');
+      const divisionName = rawDivisionName
+        .replace('American League ', 'AL ')
+        .replace('National League ', 'NL ');
       const splitRecords =
         (teamRecord.records as Record<string, unknown> | undefined)?.splitRecords as
           | Array<Record<string, unknown>>
