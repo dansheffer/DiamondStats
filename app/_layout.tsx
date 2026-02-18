@@ -10,7 +10,7 @@ export default function RootLayout() {
         headerTitleStyle: { fontWeight: '700' },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Diamond Stats' }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="player/[playerId]" options={{ title: 'Player Card' }} />
       <Stack.Screen name="game/[gamePk]" options={{ title: 'Box Score' }} />
     </Stack>

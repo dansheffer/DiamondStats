@@ -528,3 +528,152 @@ export async function fetchPlayerCardData(playerId: number): Promise<PlayerCardD
     careerWar: extractWar(stats, 'careerAdvanced'),
   };
 }
+
+/* ------------------------------------------------------------------ */
+/*  Stat Leaders (Who's Hot)                                          */
+/* ------------------------------------------------------------------ */
+
+export interface StatLeader {
+  rank: number;
+  playerId: number;
+  playerName: string;
+  teamAbbrev: string;
+  value: string;
+}
+
+export interface LeaderCategory {
+  category: string;
+  categoryLabel: string;
+  leaders: StatLeader[];
+}
+
+const LEADER_LABELS: Record<string, string> = {
+  homeRuns: 'Home Runs',
+  battingAverage: 'Batting AVG',
+  earnedRunAverage: 'ERA',
+};
+
+export async function fetchStatLeaders(): Promise<LeaderCategory[]> {
+  const categories = 'homeRuns,battingAverage,earnedRunAverage';
+
+  // Try current season first, fall back to previous season if empty.
+  let season = CURRENT_SEASON;
+  let data = await fetchJson(
+    `${MLB_STATS_API_BASE}/stats/leaders?leaderCategories=${categories}&season=${season}&sportId=1&limit=5`,
+  );
+
+  let leagueLeaders =
+    (data.leagueLeaders as Array<Record<string, unknown>> | undefined) ?? [];
+
+  const hasData = leagueLeaders.some((cat) => {
+    const leaders = (cat.leaders as Array<unknown> | undefined) ?? [];
+    return leaders.length > 0;
+  });
+
+  if (!hasData) {
+    season = String(Number(CURRENT_SEASON) - 1);
+    data = await fetchJson(
+      `${MLB_STATS_API_BASE}/stats/leaders?leaderCategories=${categories}&season=${season}&sportId=1&limit=5`,
+    );
+    leagueLeaders =
+      (data.leagueLeaders as Array<Record<string, unknown>> | undefined) ?? [];
+  }
+
+  return leagueLeaders.map((cat) => {
+    const category = String(cat.leaderCategory ?? '');
+    const leaders =
+      (cat.leaders as Array<Record<string, unknown>> | undefined) ?? [];
+
+    return {
+      category,
+      categoryLabel: LEADER_LABELS[category] ?? category,
+      leaders: leaders.map((leader) => {
+        const person =
+          (leader.person as Record<string, unknown> | undefined) ?? {};
+        const team = (leader.team as Record<string, unknown> | undefined) ?? {};
+        return {
+          rank: Number(leader.rank ?? 0),
+          playerId: Number(person.id ?? 0),
+          playerName: String(person.fullName ?? 'Unknown'),
+          teamAbbrev: String(team.abbreviation ?? ''),
+          value: String(leader.value ?? ''),
+        };
+      }),
+    };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Team Schedule (My Team)                                           */
+/* ------------------------------------------------------------------ */
+
+export interface TeamScheduleGame {
+  gamePk: number;
+  date: string;
+  opponent: string;
+  opponentId: number;
+  isHome: boolean;
+  awayScore: number | null;
+  homeScore: number | null;
+  status: string;
+  detailedState: string;
+  startTime: string;
+}
+
+export async function fetchTeamSchedule(
+  teamId: number,
+  daysBack = 10,
+  daysForward = 10,
+): Promise<TeamScheduleGame[]> {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - daysBack);
+  const end = new Date(now);
+  end.setDate(end.getDate() + daysForward);
+
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const data = await fetchJson(
+    `${MLB_STATS_API_BASE}/schedule?sportId=1&teamId=${teamId}&startDate=${fmt(start)}&endDate=${fmt(end)}&hydrate=linescore`,
+  );
+
+  const dates =
+    (data.dates as Array<Record<string, unknown>> | undefined) ?? [];
+  const games: TeamScheduleGame[] = [];
+
+  dates.forEach((dateEntry) => {
+    const dateGames =
+      (dateEntry.games as Array<Record<string, unknown>> | undefined) ?? [];
+    dateGames.forEach((game) => {
+      const teams =
+        (game.teams as Record<string, unknown> | undefined) ?? {};
+      const away = (teams.away as Record<string, unknown> | undefined) ?? {};
+      const home = (teams.home as Record<string, unknown> | undefined) ?? {};
+      const awayTeam =
+        (away.team as Record<string, unknown> | undefined) ?? {};
+      const homeTeam =
+        (home.team as Record<string, unknown> | undefined) ?? {};
+      const statusObj =
+        (game.status as Record<string, unknown> | undefined) ?? {};
+
+      const isHome = Number(homeTeam.id ?? 0) === teamId;
+      const opponent = isHome ? awayTeam : homeTeam;
+
+      games.push({
+        gamePk: Number(game.gamePk ?? 0),
+        date: String(game.officialDate ?? dateEntry.date ?? ''),
+        opponent: String(opponent.name ?? 'TBD'),
+        opponentId: Number(opponent.id ?? 0),
+        isHome,
+        awayScore: typeof away.score === 'number' ? away.score : null,
+        homeScore: typeof home.score === 'number' ? home.score : null,
+        status: String(statusObj.abstractGameState ?? 'Scheduled'),
+        detailedState: String(statusObj.detailedState ?? 'Scheduled'),
+        startTime: String(game.gameDate ?? ''),
+      });
+    });
+  });
+
+  return games;
+}
