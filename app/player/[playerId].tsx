@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import PlayerAvatar from '../src/components/PlayerAvatar';
-import { fetchPlayerCardData, type PlayerCardData } from '../src/api/mlb';
+import { fetchPlayerCardData, type AdvancedSabermetrics, type PlayerCardData } from '../src/api/mlb';
 import { theme } from '../src/theme/colors';
 
 const HITTING_STAT_KEYS: Array<{ key: string; label: string }> = [
@@ -10,16 +10,21 @@ const HITTING_STAT_KEYS: Array<{ key: string; label: string }> = [
   { key: 'homeRuns', label: 'HR' },
   { key: 'rbi', label: 'RBI' },
   { key: 'avg', label: 'AVG' },
+  { key: 'obp', label: 'OBP' },
+  { key: 'slg', label: 'SLG' },
   { key: 'ops', label: 'OPS' },
+  { key: 'stolenBases', label: 'SB' },
 ];
 
 const PITCHING_STAT_KEYS: Array<{ key: string; label: string }> = [
   { key: 'gamesPlayed', label: 'Games' },
+  { key: 'gamesStarted', label: 'GS' },
   { key: 'era', label: 'ERA' },
   { key: 'strikeOuts', label: 'SO' },
   { key: 'wins', label: 'Wins' },
   { key: 'losses', label: 'Losses' },
   { key: 'whip', label: 'WHIP' },
+  { key: 'inningsPitched', label: 'IP' },
 ];
 
 const HITTING_YEAR_SUMMARY_KEYS: Array<{ key: string; label: string }> = [
@@ -87,8 +92,9 @@ export default function PlayerCardScreen() {
   const resolvedTeam = playerData?.teamName ?? (typeof team === 'string' ? team : 'N/A');
   const resolvedPosition =
     playerData?.position ?? (typeof position === 'string' ? position : 'N/A');
-  const isPitcher = ['P', 'SP', 'RP', 'CP', 'TWP'].includes(String(resolvedPosition).toUpperCase());
-  const statKeys = isPitcher ? PITCHING_STAT_KEYS : HITTING_STAT_KEYS;
+  const isTwoWay = playerData?.isTwoWay ?? (String(resolvedPosition).toUpperCase() === 'TWP');
+  const isPitcher = ['P', 'SP', 'RP', 'CP'].includes(String(resolvedPosition).toUpperCase());
+  const statKeys = (isPitcher && !isTwoWay) ? PITCHING_STAT_KEYS : HITTING_STAT_KEYS;
 
   const seasonRows = useMemo(() => buildRows(playerData?.seasonStats ?? {}, statKeys), [
     playerData?.seasonStats,
@@ -98,11 +104,35 @@ export default function PlayerCardScreen() {
     playerData?.careerStats,
     statKeys,
   ]);
+
+  // Two-way player: show both sides
+  const twoWaySeasonHitting = useMemo(
+    () => (isTwoWay ? buildRows(playerData?.seasonHittingStats ?? {}, HITTING_STAT_KEYS) : []),
+    [isTwoWay, playerData?.seasonHittingStats],
+  );
+  const twoWaySeasonPitching = useMemo(
+    () => (isTwoWay ? buildRows(playerData?.seasonPitchingStats ?? {}, PITCHING_STAT_KEYS) : []),
+    [isTwoWay, playerData?.seasonPitchingStats],
+  );
+  const twoWayCareerHitting = useMemo(
+    () => (isTwoWay ? buildRows(playerData?.careerHittingStats ?? {}, HITTING_STAT_KEYS) : []),
+    [isTwoWay, playerData?.careerHittingStats],
+  );
+  const twoWayCareerPitching = useMemo(
+    () => (isTwoWay ? buildRows(playerData?.careerPitchingStats ?? {}, PITCHING_STAT_KEYS) : []),
+    [isTwoWay, playerData?.careerPitchingStats],
+  );
+
   const currentYear = new Date().getFullYear();
-  const yearByYear = isPitcher
-    ? (playerData?.yearByYearPitching ?? [])
-    : (playerData?.yearByYearHitting ?? []);
-  const yearSummaryKeys = isPitcher ? PITCHING_YEAR_SUMMARY_KEYS : HITTING_YEAR_SUMMARY_KEYS;
+  const yearByYearHitting = playerData?.yearByYearHitting ?? [];
+  const yearByYearPitching = playerData?.yearByYearPitching ?? [];
+  const yearByYear = isTwoWay
+    ? yearByYearHitting
+    : isPitcher
+      ? yearByYearPitching
+      : yearByYearHitting;
+  const yearSummaryKeys = (isPitcher && !isTwoWay) ? PITCHING_YEAR_SUMMARY_KEYS : HITTING_YEAR_SUMMARY_KEYS;
+  const seasonHasData = seasonRows.length > 0;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -127,27 +157,90 @@ export default function PlayerCardScreen() {
 
         {!loading && !error ? (
           <>
-            <Section title={`Season Stats • ${currentYear}`}>
-              {seasonRows.length > 0 ? (
-                seasonRows.map((row) => (
-                  <StatRow key={`season-${row.label}`} label={row.label} value={row.value} />
-                ))
-              ) : (
-                <Text style={styles.emptyText}>Season has not started yet.</Text>
-              )}
-            </Section>
+            {/* ── Season Stats ─────────────────────────────────── */}
+            {isTwoWay ? (
+              <>
+                <Section title={`${currentYear} Hitting`}>
+                  {twoWaySeasonHitting.length > 0 ? (
+                    twoWaySeasonHitting.map((row) => (
+                      <StatRow key={`sh-${row.label}`} label={row.label} value={row.value} />
+                    ))
+                  ) : (
+                    <PreSeasonNote year={currentYear} />
+                  )}
+                </Section>
+                <Section title={`${currentYear} Pitching`}>
+                  {twoWaySeasonPitching.length > 0 ? (
+                    twoWaySeasonPitching.map((row) => (
+                      <StatRow key={`sp-${row.label}`} label={row.label} value={row.value} />
+                    ))
+                  ) : (
+                    <PreSeasonNote year={currentYear} />
+                  )}
+                </Section>
+              </>
+            ) : (
+              <Section title={`Season Stats • ${currentYear}`}>
+                {seasonHasData ? (
+                  seasonRows.map((row) => (
+                    <StatRow key={`season-${row.label}`} label={row.label} value={row.value} />
+                  ))
+                ) : (
+                  <PreSeasonNote year={currentYear} />
+                )}
+              </Section>
+            )}
 
-            <Section title="Career Stats">
-              {careerRows.length > 0 ? (
-                careerRows.map((row) => (
-                  <StatRow key={`career-${row.label}`} label={row.label} value={row.value} />
-                ))
-              ) : (
-                <Text style={styles.emptyText}>Career data currently unavailable.</Text>
-              )}
-            </Section>
+            {/* ── Career Stats ─────────────────────────────────── */}
+            {isTwoWay ? (
+              <>
+                <Section title="Career Hitting">
+                  {twoWayCareerHitting.length > 0 ? (
+                    twoWayCareerHitting.map((row) => (
+                      <StatRow key={`ch-${row.label}`} label={row.label} value={row.value} />
+                    ))
+                  ) : (
+                    <Text style={styles.emptyText}>Career hitting data unavailable.</Text>
+                  )}
+                </Section>
+                <Section title="Career Pitching">
+                  {twoWayCareerPitching.length > 0 ? (
+                    twoWayCareerPitching.map((row) => (
+                      <StatRow key={`cp-${row.label}`} label={row.label} value={row.value} />
+                    ))
+                  ) : (
+                    <Text style={styles.emptyText}>Career pitching data unavailable.</Text>
+                  )}
+                </Section>
+              </>
+            ) : (
+              <Section title="Career Stats">
+                {careerRows.length > 0 ? (
+                  careerRows.map((row) => (
+                    <StatRow key={`career-${row.label}`} label={row.label} value={row.value} />
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}>Career data currently unavailable.</Text>
+                )}
+              </Section>
+            )}
 
-            <Section title="Career Snapshot • Last 10 Seasons">
+            {/* ── Advanced Sabermetrics ────────────────────────── */}
+            {playerData?.careerAdvancedHitting && hasAnySabermetric(playerData.careerAdvancedHitting) && (
+              <Section title="Advanced Sabermetrics • Hitting">
+                <SabermetricGrid stats={playerData.careerAdvancedHitting} type="hitting" />
+                <Text style={styles.saberNote}>Career advanced metrics via MLB Stats API</Text>
+              </Section>
+            )}
+            {playerData?.careerAdvancedPitching && hasAnySabermetric(playerData.careerAdvancedPitching) && (
+              <Section title={isTwoWay ? 'Advanced Sabermetrics • Pitching' : 'Advanced Sabermetrics'}>
+                <SabermetricGrid stats={playerData.careerAdvancedPitching} type="pitching" />
+                <Text style={styles.saberNote}>Career advanced metrics via MLB Stats API</Text>
+              </Section>
+            )}
+
+            {/* ── Year-by-Year ─────────────────────────────────── */}
+            <Section title={isTwoWay ? 'Career Snapshot • Hitting (Last 10)' : 'Career Snapshot • Last 10 Seasons'}>
               {yearByYear.length > 0 ? (
                 yearByYear.map((line) => (
                   <View key={`${line.season}-${line.teamName}`} style={styles.yearRow}>
@@ -172,13 +265,38 @@ export default function PlayerCardScreen() {
               )}
             </Section>
 
+            {/* Two-way: also show pitching year-by-year */}
+            {isTwoWay && yearByYearPitching.length > 0 && (
+              <Section title="Career Snapshot • Pitching (Last 10)">
+                {yearByYearPitching.map((line) => (
+                  <View key={`p-${line.season}-${line.teamName}`} style={styles.yearRow}>
+                    <View style={styles.yearHeaderRow}>
+                      <Text style={styles.yearSeason}>{line.season}</Text>
+                      <Text style={styles.yearTeam}>{line.teamName}</Text>
+                    </View>
+                    <View style={styles.yearStatsRow}>
+                      {PITCHING_YEAR_SUMMARY_KEYS.map((key) => (
+                        <Text key={`p-${line.season}-${key.key}`} style={styles.yearStatText}>
+                          {key.label}:{' '}
+                          <Text style={styles.yearStatValue}>
+                            {formatStatValue(line.stats[key.key])}
+                          </Text>
+                        </Text>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </Section>
+            )}
+
+            {/* ── WAR Stats ────────────────────────────────────── */}
             <Section title="WAR Stats">
               <StatRow
                 label="Season WAR"
                 value={
                   playerData?.seasonWar !== null && playerData?.seasonWar !== undefined
                     ? playerData.seasonWar.toFixed(1)
-                    : 'N/A'
+                    : seasonHasData ? 'Pending' : 'Pre-Season'
                 }
               />
               <StatRow
@@ -189,7 +307,9 @@ export default function PlayerCardScreen() {
                     : 'N/A'
                 }
               />
-              <Text style={styles.warNote}>WAR availability depends on MLB Stats API feed.</Text>
+              <Text style={styles.warNote}>
+                WAR is not directly provided by the MLB Stats API. Values shown when available from the feed.
+              </Text>
             </Section>
           </>
         ) : null}
@@ -231,6 +351,64 @@ function StatRow({ label, value }: { label: string; value: string | number }) {
     <View style={styles.statRow}>
       <Text style={styles.statLabel}>{label}</Text>
       <Text style={styles.statValue}>{String(value)}</Text>
+    </View>
+  );
+}
+
+function PreSeasonNote({ year }: { year: number }) {
+  return (
+    <View style={styles.preSeasonBox}>
+      <Text style={styles.preSeasonEmoji}>⚾</Text>
+      <Text style={styles.preSeasonTitle}>{year} Season Has Not Started</Text>
+      <Text style={styles.preSeasonText}>
+        Regular season stats will appear here once the {year} MLB season begins.
+        Spring Training is underway!
+      </Text>
+    </View>
+  );
+}
+
+function hasAnySabermetric(stats: AdvancedSabermetrics): boolean {
+  return Object.values(stats).some((v) => v !== null && v !== undefined);
+}
+
+const HITTING_SABER_ITEMS: Array<{ key: keyof AdvancedSabermetrics; label: string; description: string }> = [
+  { key: 'babip', label: 'BABIP', description: 'Batting Average on Balls in Play' },
+  { key: 'iso', label: 'ISO', description: 'Isolated Power (SLG − AVG)' },
+  { key: 'kPercent', label: 'K%', description: 'Strikeout Rate' },
+  { key: 'bbPercent', label: 'BB%', description: 'Walk Rate' },
+  { key: 'bbPerK', label: 'BB/K', description: 'Walk-to-Strikeout Ratio' },
+  { key: 'hrPerPA', label: 'HR/PA', description: 'Home Runs per Plate Appearance' },
+];
+
+const PITCHING_SABER_ITEMS: Array<{ key: keyof AdvancedSabermetrics; label: string; description: string }> = [
+  { key: 'babip', label: 'BABIP', description: 'Batting Average on Balls in Play' },
+  { key: 'kPer9', label: 'K/9', description: 'Strikeouts per 9 Innings' },
+  { key: 'bbPer9', label: 'BB/9', description: 'Walks per 9 Innings' },
+  { key: 'hrPer9', label: 'HR/9', description: 'Home Runs per 9 Innings' },
+  { key: 'hPer9', label: 'H/9', description: 'Hits per 9 Innings' },
+  { key: 'whiffPercent', label: 'Whiff%', description: 'Swing-and-Miss Rate' },
+  { key: 'strikePercent', label: 'Strike%', description: 'Strike Percentage' },
+  { key: 'qualityStarts', label: 'QS', description: 'Quality Starts' },
+];
+
+function SabermetricGrid({ stats, type }: { stats: AdvancedSabermetrics; type: 'hitting' | 'pitching' }) {
+  const items = type === 'hitting' ? HITTING_SABER_ITEMS : PITCHING_SABER_ITEMS;
+  const available = items.filter((item) => stats[item.key] !== null && stats[item.key] !== undefined);
+
+  if (available.length === 0) {
+    return <Text style={styles.emptyText}>Advanced metrics not available.</Text>;
+  }
+
+  return (
+    <View style={styles.saberGrid}>
+      {available.map((item) => (
+        <View key={item.key} style={styles.saberCell}>
+          <Text style={styles.saberValue}>{String(stats[item.key])}</Text>
+          <Text style={styles.saberLabel}>{item.label}</Text>
+          <Text style={styles.saberDesc}>{item.description}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -389,5 +567,61 @@ const styles = StyleSheet.create({
     color: theme.mutedText,
     fontSize: 12,
     marginTop: 2,
+  },
+  preSeasonBox: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 4,
+  },
+  preSeasonEmoji: {
+    fontSize: 28,
+  },
+  preSeasonTitle: {
+    color: theme.primary,
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  preSeasonText: {
+    color: theme.mutedText,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  saberGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  saberCell: {
+    width: '47%' as unknown as number,
+    backgroundColor: '#f0f5ff',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#dbe7f8',
+  },
+  saberValue: {
+    color: theme.accent,
+    fontWeight: '900',
+    fontSize: 18,
+  },
+  saberLabel: {
+    color: theme.primary,
+    fontWeight: '800',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  saberDesc: {
+    color: theme.mutedText,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  saberNote: {
+    color: theme.mutedText,
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 4,
   },
 });

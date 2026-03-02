@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -14,8 +15,10 @@ import {
   fetchMlbNews,
   fetchStatLeaders,
   fetchTodayGames,
+  searchPlayersByName,
   type LeaderCategory,
   type MlbNewsItem,
+  type PlayerSearchResult,
   type TodayGame,
 } from '../src/api/mlb';
 import { getCached, invalidateCache } from '../src/utils/cache';
@@ -74,8 +77,50 @@ export default function ScoresTab() {
   const [games, setGames] = useState<TodayGame[]>([]);
   const [news, setNews] = useState<MlbNewsItem[]>([]);
   const [leaders, setLeaders] = useState<LeaderCategory[]>([]);
+  const [leadersSeason, setLeadersSeason] = useState<string>('');
+  const [leadersIsFallback, setLeadersIsFallback] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  /* Player search */
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<PlayerSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const handleSearch = useCallback(async (text: string) => {
+    setSearchQuery(text);
+    if (text.trim().length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    setSearchLoading(true);
+    setShowDropdown(true);
+    try {
+      const data = await searchPlayersByName(text.trim());
+      setSearchResults(data.slice(0, 6));
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  const selectPlayer = useCallback((player: PlayerSearchResult) => {
+    setShowDropdown(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    router.push({
+      pathname: '/player/[playerId]',
+      params: {
+        playerId: String(player.id),
+        name: player.fullName,
+        team: player.teamName,
+        position: player.position,
+      },
+    });
+  }, [router]);
 
   const loadData = useCallback(async (skipCache = false) => {
     try {
@@ -86,14 +131,16 @@ export default function ScoresTab() {
           invalidateCache('statLeaders'),
         ]);
       }
-      const [g, n, l] = await Promise.all([
+      const [g, n, leadersResult] = await Promise.all([
         getCached('todayGames', fetchTodayGames, TTL.games),
         getCached('mlbNews', fetchMlbNews, TTL.news),
         getCached('statLeaders', fetchStatLeaders, TTL.leaders),
       ]);
       setGames(g);
       setNews(n);
-      setLeaders(l);
+      setLeaders(leadersResult.categories);
+      setLeadersSeason(leadersResult.season);
+      setLeadersIsFallback(leadersResult.isFallback);
     } catch {
       /* Silently handle — show whatever we have */
     }
@@ -134,10 +181,49 @@ export default function ScoresTab() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
       }
     >
+      {/* ── Player Search ──────────────────────────────────────── */}
+      <View style={styles.searchWrapper}>
+        <TextInput
+          placeholder="🔍  Search any player…"
+          placeholderTextColor={theme.mutedText}
+          value={searchQuery}
+          onChangeText={(t) => void handleSearch(t)}
+          style={styles.searchInput}
+          autoCapitalize="words"
+          returnKeyType="search"
+        />
+        {showDropdown && (
+          <View style={styles.dropdown}>
+            {searchLoading ? (
+              <ActivityIndicator color={theme.primary} style={{ paddingVertical: 12 }} />
+            ) : searchResults.length > 0 ? (
+              searchResults.map((player) => (
+                <Pressable
+                  key={player.id}
+                  style={({ pressed }) => [styles.dropdownRow, pressed && styles.pressed]}
+                  onPress={() => selectPlayer(player)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.dropdownName}>{player.fullName}</Text>
+                    <Text style={styles.dropdownMeta}>
+                      {player.position} • {player.teamName}
+                    </Text>
+                  </View>
+                  <Text style={styles.dropdownArrow}>→</Text>
+                </Pressable>
+              ))
+            ) : (
+              <Text style={styles.dropdownEmpty}>No players found</Text>
+            )}
+          </View>
+        )}
+      </View>
+
       {/* ── Scoreboard ─────────────────────────────────────────── */}
       <Text style={styles.sectionTitle}>Today's Games</Text>
       {games.length > 0 ? (
@@ -183,7 +269,14 @@ export default function ScoresTab() {
       {/* ── Who's Hot ──────────────────────────────────────────── */}
       {leaders.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Who's Hot 🔥</Text>
+          <Text style={styles.sectionTitle}>
+            Who's Hot 🔥{leadersSeason ? ` • ${leadersSeason}` : ''}
+          </Text>
+          {leadersIsFallback && (
+            <Text style={styles.fallbackNote}>
+              Showing last season's leaders — {new Date().getFullYear()} season hasn't started yet
+            </Text>
+          )}
           <View style={styles.leadersCard}>
             {leaders.map((cat) => (
               <View key={cat.category} style={styles.leaderSection}>
@@ -252,6 +345,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   sectionTitle: { fontSize: 20, fontWeight: '800', color: theme.text, marginTop: 4 },
+  fallbackNote: { color: theme.mutedText, fontSize: 12, fontWeight: '600', fontStyle: 'italic', marginTop: -4 },
 
   /* Scoreboard */
   gameRow: { gap: 10, paddingVertical: 4, paddingRight: 8 },
@@ -334,6 +428,49 @@ const styles = StyleSheet.create({
   },
   newsTitle: { color: theme.text, fontSize: 15, fontWeight: '700', marginBottom: 4 },
   newsMeta: { color: theme.mutedText, fontSize: 12 },
+
+  /* Player search */
+  searchWrapper: { zIndex: 10 },
+  searchInput: {
+    backgroundColor: '#ffffff',
+    borderColor: theme.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: theme.text,
+  },
+  dropdown: {
+    backgroundColor: '#ffffff',
+    borderColor: theme.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginTop: 4,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  dropdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderBottomColor: theme.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  dropdownName: { color: theme.text, fontWeight: '700', fontSize: 15 },
+  dropdownMeta: { color: theme.mutedText, fontSize: 12, marginTop: 1 },
+  dropdownArrow: { color: theme.primary, fontWeight: '800', fontSize: 16 },
+  dropdownEmpty: {
+    color: theme.mutedText,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 14,
+  },
 
   /* Shared */
   emptyCard: {

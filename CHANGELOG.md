@@ -4,6 +4,28 @@ All notable changes to **DiamondStats** will be documented in this file.
 
 ---
 
+## [1.0.0] – 2026-03-01
+
+### Added
+- **Advanced Sabermetrics section** on player cards – BABIP, ISO, K%, BB%, BB/K, HR/PA for hitters; K/9, BB/9, HR/9, H/9, Whiff%, Strike%, QS for pitchers. Data sourced from MLB Stats API `careerAdvanced` endpoint.
+- **Two-way player support** – Players like Shohei Ohtani (position: TWP) now show separate hitting AND pitching career stats, season stats, year-by-year snapshots, and advanced sabermetrics for both sides.
+- **Pre-season indicator** – When the regular season hasn't started, the Season Stats section now shows a clear "Season Has Not Started" message with Spring Training context instead of a blank "Season has not started yet" line.
+- **Leader season labeling** – "Who's Hot" section now displays which season the leaders are from. When falling back to the previous season (pre-season), it shows a note explaining that the current season hasn't started.
+- **Additional stat columns** – Added OBP, SLG, SB to hitting stat keys; added GS, IP to pitching stat keys for more complete player cards.
+
+### Fixed
+- **BUG: WAR always showed "N/A"** – The MLB Stats API does not include a `war` field in `seasonAdvanced` or `careerAdvanced` responses. The `extractWar()` function was looking for non-existent keys. WAR section now displays "Pre-Season" or "Pending" as appropriate, with an honest note about API limitations.
+- **BUG: Ohtani treated as pitcher-only** – `TWP` (Two-Way Player) was in the pitcher position check, causing only pitching stats to display. Two-way players now get dedicated dual-stat display.
+- **BUG: "Who's Hot" showed previous year stats without labeling** – `fetchStatLeaders()` fell back to the prior season when the current season had no data, but never told the user. Now returns `season` and `isFallback` metadata.
+- **BUG: Advanced stats fetched but never displayed** – `seasonAdvanced` and `careerAdvanced` data was requested from the API but the rich sabermetric data (BABIP, ISO, K rates, etc.) was discarded. Now fully surfaced in the player card.
+
+### Changed
+- `fetchStatLeaders()` now returns a `StatLeadersResult` wrapper object with `{ season, isFallback, categories }` instead of a bare `LeaderCategory[]`.
+- `PlayerCardData` interface expanded with `isTwoWay`, separate hitting/pitching stats, and `AdvancedSabermetrics` for both hitting and pitching.
+- Added `pickStatsByTypeAndGroup()` helper for filtering stats by both type and group name.
+
+---
+
 ## [0.2.0] – 2025-02-14
 
 ### Added

@@ -82,17 +82,42 @@ export interface TeamRosterPlayer {
   position: string;
 }
 
+export interface AdvancedSabermetrics {
+  babip: string | null;
+  iso: string | null;
+  kPercent: string | null;
+  bbPercent: string | null;
+  bbPerK: string | null;
+  hrPerPA: string | null;
+  /** Pitching-specific */
+  kPer9: string | null;
+  bbPer9: string | null;
+  hrPer9: string | null;
+  hPer9: string | null;
+  qualityStarts: number | null;
+  whiffPercent: string | null;
+  strikePercent: string | null;
+}
+
 export interface PlayerCardData {
   id: number;
   fullName: string;
   teamName: string;
   position: string;
+  isTwoWay: boolean;
   seasonStats: Record<string, string | number>;
   careerStats: Record<string, string | number>;
+  /** Two-way players get both hitting and pitching career stats */
+  careerHittingStats: Record<string, string | number>;
+  careerPitchingStats: Record<string, string | number>;
+  seasonHittingStats: Record<string, string | number>;
+  seasonPitchingStats: Record<string, string | number>;
   yearByYearHitting: YearlyStatLine[];
   yearByYearPitching: YearlyStatLine[];
   seasonWar: number | null;
   careerWar: number | null;
+  careerAdvancedHitting: AdvancedSabermetrics;
+  careerAdvancedPitching: AdvancedSabermetrics;
 }
 
 export interface YearlyStatLine {
@@ -434,6 +459,28 @@ function pickStatsByType(
   return {};
 }
 
+function pickStatsByTypeAndGroup(
+  stats: Array<Record<string, unknown>>,
+  typeName: string,
+  groupName: string,
+  season?: string,
+): Record<string, string | number> {
+  const matches = stats.filter(
+    (item) => getTypeName(item) === typeName.toLowerCase() && getGroupName(item) === groupName.toLowerCase(),
+  );
+
+  for (const entry of matches) {
+    const splits = (entry.splits as Array<Record<string, unknown>> | undefined) ?? [];
+    const chosenSplit = season ? getSplitForSeason(splits, season) : splits[0];
+    const map = toStatsMap(chosenSplit);
+    if (Object.keys(map).length > 0) {
+      return map;
+    }
+  }
+
+  return {};
+}
+
 function getGroupName(item: Record<string, unknown>): string {
   const group = (item.group as Record<string, unknown> | undefined) ?? {};
   return String(group.displayName ?? '').toLowerCase();
@@ -499,6 +546,56 @@ function extractWar(
   return null;
 }
 
+function extractSabermetrics(
+  stats: Array<Record<string, unknown>>,
+  typeName: string,
+  groupName: 'hitting' | 'pitching',
+  season?: string,
+): AdvancedSabermetrics {
+  const matches = stats.filter(
+    (item) => getTypeName(item) === typeName.toLowerCase() && getGroupName(item) === groupName,
+  );
+
+  let stat: Record<string, unknown> = {};
+  for (const entry of matches) {
+    const splits = (entry.splits as Array<Record<string, unknown>> | undefined) ?? [];
+    const chosenSplit = season ? getSplitForSeason(splits, season) : splits[0];
+    if (chosenSplit) {
+      stat = (chosenSplit.stat as Record<string, unknown> | undefined) ?? {};
+      if (Object.keys(stat).length > 0) break;
+    }
+  }
+
+  const s = (key: string): string | null => {
+    const v = stat[key];
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number') return String(v);
+    return null;
+  };
+  const n = (key: string): number | null => {
+    const v = stat[key];
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string') { const p = Number(v); return Number.isFinite(p) ? p : null; }
+    return null;
+  };
+
+  return {
+    babip: s('babip'),
+    iso: s('iso'),
+    kPercent: s('strikeoutsPerPlateAppearance'),
+    bbPercent: s('walksPerPlateAppearance'),
+    bbPerK: s('walksPerStrikeout'),
+    hrPerPA: s('homeRunsPerPlateAppearance'),
+    kPer9: s('strikeoutsPer9'),
+    bbPer9: s('baseOnBallsPer9'),
+    hrPer9: s('homeRunsPer9'),
+    hPer9: s('hitsPer9'),
+    qualityStarts: n('qualityStarts'),
+    whiffPercent: s('whiffPercentage'),
+    strikePercent: s('strikePercentage'),
+  };
+}
+
 export async function fetchPlayerCardData(playerId: number): Promise<PlayerCardData> {
   const season = CURRENT_SEASON;
   const [bioData, statsData] = await Promise.all([
@@ -514,18 +611,37 @@ export async function fetchPlayerCardData(playerId: number): Promise<PlayerCardD
   const primaryPosition = (person.primaryPosition as Record<string, unknown> | undefined) ?? {};
 
   const stats = (statsData.stats as Array<Record<string, unknown>> | undefined) ?? [];
+  const posAbbrev = String(primaryPosition.abbreviation ?? 'N/A');
+  const isTwoWay = posAbbrev.toUpperCase() === 'TWP';
+
+  // For two-way players pick the group with more career data as "primary"
+  const careerHitting = pickStatsByType(stats, 'career');
+  const careerPitching = pickStatsByTypeAndGroup(stats, 'career', 'pitching');
+  const seasonHitting = pickStatsByType(stats, 'season', season);
+  const seasonPitching = pickStatsByTypeAndGroup(stats, 'season', 'pitching', season);
+
+  const isPitcher = ['P', 'SP', 'RP', 'CP'].includes(posAbbrev.toUpperCase());
+  const seasonStats = isPitcher && !isTwoWay ? seasonPitching : seasonHitting;
+  const careerStats = isPitcher && !isTwoWay ? careerPitching : careerHitting;
 
   return {
     id: playerId,
     fullName: String(person.fullName ?? 'Unknown Player'),
     teamName: String(currentTeam.name ?? 'N/A'),
-    position: String(primaryPosition.abbreviation ?? 'N/A'),
-    seasonStats: pickStatsByType(stats, 'season', season),
-    careerStats: pickStatsByType(stats, 'career'),
+    position: posAbbrev,
+    isTwoWay,
+    seasonStats,
+    careerStats,
+    careerHittingStats: careerHitting,
+    careerPitchingStats: careerPitching,
+    seasonHittingStats: seasonHitting,
+    seasonPitchingStats: seasonPitching,
     yearByYearHitting: pickYearByYear(stats, 'hitting'),
     yearByYearPitching: pickYearByYear(stats, 'pitching'),
     seasonWar: extractWar(stats, 'seasonAdvanced', season),
     careerWar: extractWar(stats, 'careerAdvanced'),
+    careerAdvancedHitting: extractSabermetrics(stats, 'careerAdvanced', 'hitting'),
+    careerAdvancedPitching: extractSabermetrics(stats, 'careerAdvanced', 'pitching'),
   };
 }
 
@@ -553,11 +669,18 @@ const LEADER_LABELS: Record<string, string> = {
   earnedRunAverage: 'ERA',
 };
 
-export async function fetchStatLeaders(): Promise<LeaderCategory[]> {
+export interface StatLeadersResult {
+  season: string;
+  isFallback: boolean;
+  categories: LeaderCategory[];
+}
+
+export async function fetchStatLeaders(): Promise<StatLeadersResult> {
   const categories = 'homeRuns,battingAverage,earnedRunAverage';
 
   // Try current season first, fall back to previous season if empty.
   let season = CURRENT_SEASON;
+  let isFallback = false;
   let data = await fetchJson(
     `${MLB_STATS_API_BASE}/stats/leaders?leaderCategories=${categories}&season=${season}&sportId=1&limit=5`,
   );
@@ -572,6 +695,7 @@ export async function fetchStatLeaders(): Promise<LeaderCategory[]> {
 
   if (!hasData) {
     season = String(Number(CURRENT_SEASON) - 1);
+    isFallback = true;
     data = await fetchJson(
       `${MLB_STATS_API_BASE}/stats/leaders?leaderCategories=${categories}&season=${season}&sportId=1&limit=5`,
     );
@@ -579,28 +703,41 @@ export async function fetchStatLeaders(): Promise<LeaderCategory[]> {
       (data.leagueLeaders as Array<Record<string, unknown>> | undefined) ?? [];
   }
 
-  return leagueLeaders.map((cat) => {
-    const category = String(cat.leaderCategory ?? '');
-    const leaders =
-      (cat.leaders as Array<Record<string, unknown>> | undefined) ?? [];
-
-    return {
-      category,
-      categoryLabel: LEADER_LABELS[category] ?? category,
-      leaders: leaders.map((leader) => {
-        const person =
-          (leader.person as Record<string, unknown> | undefined) ?? {};
-        const team = (leader.team as Record<string, unknown> | undefined) ?? {};
-        return {
-          rank: Number(leader.rank ?? 0),
-          playerId: Number(person.id ?? 0),
-          playerName: String(person.fullName ?? 'Unknown'),
-          teamAbbrev: String(team.abbreviation ?? ''),
-          value: String(leader.value ?? ''),
-        };
-      }),
-    };
+  // Deduplicate — API sometimes returns separate AL/NL entries per category.
+  const seen = new Set<string>();
+  const dedupedLeaders = leagueLeaders.filter((cat) => {
+    const key = String((cat as Record<string, unknown>).leaderCategory ?? '');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
+
+  return {
+    season,
+    isFallback,
+    categories: dedupedLeaders.map((cat) => {
+      const category = String(cat.leaderCategory ?? '');
+      const leaders =
+        (cat.leaders as Array<Record<string, unknown>> | undefined) ?? [];
+
+      return {
+        category,
+        categoryLabel: LEADER_LABELS[category] ?? category,
+        leaders: leaders.map((leader) => {
+          const person =
+            (leader.person as Record<string, unknown> | undefined) ?? {};
+          const team = (leader.team as Record<string, unknown> | undefined) ?? {};
+          return {
+            rank: Number(leader.rank ?? 0),
+            playerId: Number(person.id ?? 0),
+            playerName: String(person.fullName ?? 'Unknown'),
+            teamAbbrev: String(team.abbreviation ?? ''),
+            value: String(leader.value ?? ''),
+          };
+        }),
+      };
+    }),
+  };
 }
 
 /* ------------------------------------------------------------------ */
