@@ -1,0 +1,446 @@
+================================================================================
+ DIAMOND STATS — DEVELOPER RUNBOOK
+ v1.0 · March 2026
+================================================================================
+
+TABLE OF CONTENTS
+─────────────────
+ 1. Project Overview
+ 2. Tech Stack
+ 3. Folder Structure
+ 4. Getting Started
+ 5. Daily Development Workflow
+ 6. Git Commands Cheat Sheet
+ 7. Expo / React Native Commands
+ 8. Building & Deploying to iOS
+ 9. MLB Stats API Reference
+10. Troubleshooting
+11. Key Files & What They Do
+
+================================================================================
+ 1. PROJECT OVERVIEW
+================================================================================
+
+Diamond Stats is a mobile baseball stats app built with Expo and React Native.
+It pulls live data from the MLB Stats API and displays:
+  • Today's scoreboard with live/final/upcoming game cards
+  • Player search and detailed player stat cards
+  • MLB standings by division
+  • "My Team" favorites with player tracking
+  • Leader boards ("Who's Hot") for batting and pitching
+  • Advanced sabermetrics (BABIP, ISO, K%, BB%, etc.)
+  • Two-way player support (e.g., Shohei Ohtani)
+
+The app is Mets-themed with custom colors:
+  METS_BLUE   = #002D72
+  METS_ORANGE = #FF5910
+
+================================================================================
+ 2. TECH STACK
+================================================================================
+
+Framework:      Expo SDK 51
+Runtime:        React Native 0.74.5
+Router:         expo-router ~3.5.24  (file-based routing)
+Language:       TypeScript ~5.3.3
+Icons:          @expo/vector-icons (Ionicons)
+Blur Effect:    expo-blur
+Gradients:      expo-linear-gradient
+Storage:        @react-native-async-storage/async-storage
+Data Source:    MLB Stats API (https://statsapi.mlb.com/api/v1)
+Package Mgr:    npm
+Build System:   EAS Build (cloud) or Xcode (local)
+Version Ctrl:   Git + GitHub (github.com/dansheffer/DiamondStats)
+
+================================================================================
+ 3. FOLDER STRUCTURE
+================================================================================
+
+DiamondStats/
+├── app.json              # Expo app config (name, slug, version, icons)
+├── babel.config.js       # Babel config for Expo
+├── package.json          # Dependencies and scripts
+├── tsconfig.json         # TypeScript config
+├── CHANGELOG.md          # Version history
+├── RUNBOOK.txt           # ← You are here
+│
+├── app/                  # All screens and code (expo-router)
+│   ├── _layout.tsx       # Root layout (wraps entire app in Stack navigator)
+│   │
+│   ├── (tabs)/           # Tab-based screens (bottom tab bar)
+│   │   ├── _layout.tsx   # Tab bar config (Ionicons, frosted glass)
+│   │   ├── index.tsx     # Home: scoreboard, search, leaders, news
+│   │   ├── standings.tsx # MLB standings by division
+│   │   ├── myteam.tsx    # "My Team" favorites list
+│   │   └── search.tsx    # Player search screen
+│   │
+│   ├── game/
+│   │   └── [gamePk].tsx  # Game detail / box score (dynamic route)
+│   │
+│   ├── player/
+│   │   └── [playerId].tsx  # Player card (dynamic route)
+│   │
+│   └── src/
+│       ├── api/
+│       │   └── mlb.ts    # ALL MLB API fetch functions
+│       ├── components/
+│       │   ├── AppLogo.tsx
+│       │   ├── PlayerAvatar.tsx
+│       │   └── valuecard.tsx
+│       ├── theme/
+│       │   └── colors.ts # Color constants (METS_BLUE, METS_ORANGE, etc.)
+│       └── utils/
+│           └── cache.ts  # AsyncStorage TTL cache helper
+│
+├── assets/               # Static images, fonts
+│   └── README.md
+│
+└── docs/
+    └── DIAMOND_STATS_SPEC.md  # Product spec document
+
+================================================================================
+ 4. GETTING STARTED (from scratch)
+================================================================================
+
+Prerequisites:
+  • Node.js 18+ (check: node --version)
+  • npm (comes with Node)
+  • Xcode (for iOS simulator — install from Mac App Store)
+  • Git
+
+Step-by-step:
+
+  # 1. Clone the repo
+  git clone https://github.com/dansheffer/DiamondStats.git
+  cd DiamondStats
+
+  # 2. Install dependencies
+  npm install
+
+  # 3. Start the development server
+  npx expo start
+
+  # 4. Press 'i' to open in iOS Simulator
+  #    (or scan QR code with Expo Go on your phone)
+
+That's it! The app should launch in the simulator.
+
+================================================================================
+ 5. DAILY DEVELOPMENT WORKFLOW
+================================================================================
+
+  # 1. Open VS Code in the project folder
+  code .
+
+  # 2. Start the Expo dev server
+  npx expo start
+
+  # 3. Press 'i' for iOS Simulator (or 'a' for Android)
+
+  # 4. Edit any file → save → app hot-reloads automatically
+
+  # 5. If hot reload breaks, press 'r' in the terminal to reload
+
+  # 6. When done, Ctrl+C to stop the dev server
+
+  # 7. Commit your changes (see Git section below)
+
+================================================================================
+ 6. GIT COMMANDS CHEAT SHEET
+================================================================================
+
+─── BASICS ───
+
+  git status                    # See what files changed
+  git status --short            # Compact view (M=modified, ??=untracked)
+  git diff                      # See actual code changes (unstaged)
+  git diff --staged             # See code changes (staged)
+  git log --oneline -10         # Last 10 commits, one line each
+  git log --oneline --graph     # Visual branch history
+
+─── STAGING & COMMITTING ───
+
+  git add .                     # Stage ALL changed files
+  git add -A                    # Stage ALL (including deletes)
+  git add app/src/api/mlb.ts    # Stage a specific file
+  git commit -m "message"       # Commit with a message
+  git commit -m "title          # Multi-line commit message
+                                #
+  - bullet 1                    #
+  - bullet 2"                   #
+
+─── PUSHING & PULLING ───
+
+  git push origin main          # Push your commits to GitHub
+  git pull origin main          # Pull latest from GitHub
+  git fetch origin              # Download remote changes (don't merge)
+
+─── BRANCHES ───
+
+  git branch                    # List local branches
+  git branch feature-name       # Create a new branch
+  git checkout feature-name     # Switch to a branch
+  git checkout -b feature-name  # Create AND switch (shortcut)
+  git checkout main             # Switch back to main
+  git merge feature-name        # Merge a branch into current branch
+
+─── UNDO / FIX ───
+
+  git checkout -- filename      # Discard changes to a file
+  git reset HEAD filename       # Unstage a file (keep changes)
+  git reset --soft HEAD~1       # Undo last commit (keep changes staged)
+  git stash                     # Temporarily save uncommitted changes
+  git stash pop                 # Restore stashed changes
+
+─── REMOTES ───
+
+  git remote -v                 # Show remote URLs
+  git remote add origin URL     # Add a remote
+  git remote set-url origin URL # Change remote URL
+
+─── TYPICAL WORKFLOW ───
+
+  # After making changes:
+  git status                    # Check what changed
+  git add -A                    # Stage everything
+  git status                    # Verify staged files
+  git commit -m "description"   # Commit
+  git push origin main          # Push to GitHub
+
+================================================================================
+ 7. EXPO / REACT NATIVE COMMANDS
+================================================================================
+
+─── DEVELOPMENT ───
+
+  npx expo start                # Start dev server (press 'i' for iOS)
+  npx expo start --ios          # Start and auto-launch iOS Simulator
+  npx expo start --clear        # Start with cache cleared
+  npx expo start -c             # Same as --clear (shortcut)
+
+─── DEPENDENCIES ───
+
+  npx expo install package-name # Install a package (Expo-compatible version)
+  npm install package-name      # Install any npm package
+  npm install                   # Reinstall all deps from package.json
+
+─── CACHE CLEARING (when things break) ───
+
+  npx expo start --clear        # Clear Metro bundler cache
+  rm -rf node_modules && npm i  # Nuclear option: reinstall everything
+  watchman watch-del-all        # Clear Watchman cache (if installed)
+
+─── PREBUILD (native projects) ───
+
+  npx expo prebuild --platform ios      # Generate native iOS project
+  npx expo prebuild --clean             # Regenerate from scratch
+  # Note: ios/ and android/ folders are gitignored — regenerate as needed
+
+─── EAS BUILD (cloud builds) ───
+
+  npm install -g eas-cli        # Install EAS CLI (one time)
+  eas login                     # Log into Expo account
+  eas build --platform ios      # Build iOS app in the cloud
+  eas build --platform android  # Build Android app in the cloud
+  eas submit                    # Submit to App Store / Play Store
+
+─── INFO / DEBUG ───
+
+  npx expo --version            # Check Expo CLI version
+  npx expo doctor               # Diagnose project issues
+  npx react-native info         # System info (RN version, Xcode, etc.)
+
+================================================================================
+ 8. BUILDING & DEPLOYING TO iOS
+================================================================================
+
+──── OPTION A: Expo Go (Fastest for testing) ────
+
+  1. Install "Expo Go" app on your iPhone from the App Store
+  2. Run: npx expo start
+  3. Scan the QR code with your iPhone camera
+  4. App opens in Expo Go
+
+  Limitation: No custom native modules, limited to Expo SDK APIs
+
+──── OPTION B: iOS Simulator (No device needed) ────
+
+  1. Install Xcode from the Mac App Store
+  2. Open Xcode → Settings → Components → download a simulator runtime
+  3. Run: npx expo start --ios
+  4. Simulator launches and app loads automatically
+
+  Tip: If the app looks stale, press 'r' in the Metro terminal to reload
+
+──── OPTION C: EAS Build (Real device, cloud build) ────
+
+  1. Create account at expo.dev
+  2. Run: eas login
+  3. Run: eas build --platform ios --profile development
+  4. Follow prompts for Apple Developer credentials
+  5. Download the .ipa from expo.dev and install via Xcode/TestFlight
+
+  Requires: Apple Developer Account ($99/year)
+
+──── OPTION D: Local Xcode Build (Real device, free) ────
+
+  1. Run: npx expo prebuild --platform ios
+  2. Open: ios/DiamondStats.xcworkspace in Xcode
+  3. Select your device in the top bar
+  4. Click the Play ▶ button
+  5. If signing error: Xcode → Signing → select your Apple ID team
+
+  Requires: Developer Mode enabled on iPhone
+  Note: Corporate MDM profiles may block Developer Mode
+
+================================================================================
+ 9. MLB STATS API REFERENCE
+================================================================================
+
+Base URL: https://statsapi.mlb.com/api/v1
+
+─── KEY ENDPOINTS ───
+
+  /schedule?sportId=1&date=YYYY-MM-DD
+    Today's games, scores, status, teams
+
+  /people/{playerId}?hydrate=stats(group=[hitting|pitching],type=[season|career|yearByYear|careerAdvanced|seasonAdvanced])
+    Player bio + stats (can combine multiple groups/types)
+
+  /standings?leagueId=103,104&season=YYYY
+    Division standings for AL (103) and NL (104)
+
+  /stats/leaders?leaderCategories=...&season=YYYY&sportId=1&limit=5
+    Stat leaders (HR, avg, ERA, strikeouts, etc.)
+
+  /game/{gamePk}/boxscore
+    Full box score for a specific game
+
+─── PLAYER IDs (useful for testing) ───
+
+  Juan Soto:       665742  (Mets, RF)
+  Shohei Ohtani:   660271  (Dodgers, TWP — two-way player)
+  Paul Skenes:     694973  (Pirates, P)
+  Aaron Judge:     592450  (Yankees, CF)
+  Mookie Betts:    605141  (Dodgers, SS)
+  Gerrit Cole:     543037  (Yankees, P)
+
+─── STAT GROUPS & TYPES ───
+
+  Groups:   hitting, pitching, fielding
+  Types:    season, career, yearByYear, seasonAdvanced, careerAdvanced
+
+  season         → Current year basic stats
+  career         → Lifetime totals
+  yearByYear     → Each season broken out
+  seasonAdvanced → BABIP, ISO, OPS, K/BB rates (current year)
+  careerAdvanced → Same but career totals
+
+─── ADVANCED SABERMETRIC FIELDS (from API) ───
+
+  Hitting:                    Pitching:
+  ────────                    ─────────
+  babip                       babip
+  iso (Isolated Power)        strikePercentage
+  stolenBasePercentage        walksPerNine (BB/9)
+  extraBaseHitPercentage      strikeoutsPerNine (K/9)
+  walkRate / bbPercent        homeRunsPerNine (HR/9)
+  strikeoutRate / kPercent    hitsPerNine (H/9)
+                              qualityStarts
+
+  Note: WAR is NOT available from this API.
+
+================================================================================
+10. TROUBLESHOOTING
+================================================================================
+
+  PROBLEM: App shows stale content after code changes
+  FIX:     Press 'r' in Metro terminal to reload
+           Or: npx expo start --clear
+
+  PROBLEM: "Unable to resolve module" error
+  FIX:     npm install
+           Then restart: npx expo start --clear
+
+  PROBLEM: White/blank screen in simulator
+  FIX:     Check terminal for red error messages
+           Try: Cmd+D in simulator → "Reload"
+
+  PROBLEM: Simulator won't launch
+  FIX:     Open Xcode → Settings → Components → install a simulator
+           Or: xcrun simctl list devices  (see available devices)
+
+  PROBLEM: "EMFILE: too many open files" error
+  FIX:     Install watchman: brew install watchman
+
+  PROBLEM: Git push rejected
+  FIX:     git pull origin main   (get remote changes first)
+           Resolve any conflicts, then push again
+
+  PROBLEM: Expo Go can't connect to dev server
+  FIX:     Make sure phone and Mac are on the same WiFi network
+           Try: npx expo start --tunnel
+
+  PROBLEM: TypeScript errors in VS Code
+  FIX:     Cmd+Shift+P → "TypeScript: Restart TS Server"
+
+  PROBLEM: "Developer Mode required" on iPhone
+  FIX:     Settings → Privacy & Security → Developer Mode → ON
+           Note: Corporate MDM may block this toggle
+
+  PROBLEM: Pod install fails
+  FIX:     brew install cocoapods
+           cd ios && pod install --repo-update
+
+================================================================================
+11. KEY FILES & WHAT THEY DO
+================================================================================
+
+  app/src/api/mlb.ts
+    ├── THE core file. All MLB API calls live here.
+    ├── fetchSchedule()          → Today's games
+    ├── fetchPlayerCardData()    → Player bio + all stats
+    ├── fetchStandings()         → Division standings
+    ├── fetchStatLeaders()       → Leader boards
+    ├── fetchBoxScore()          → Game box scores
+    ├── searchPlayers()          → Player name search
+    ├── extractSabermetrics()    → Parse advanced stats from API
+    └── pickStatsByTypeAndGroup()→ Helper to pull specific stat splits
+
+  app/(tabs)/index.tsx
+    └── Home screen: scoreboard, search bar, "Who's Hot" leaders
+
+  app/(tabs)/standings.tsx
+    └── MLB standings by division
+
+  app/(tabs)/myteam.tsx
+    └── Favorite players list (stored in AsyncStorage)
+
+  app/(tabs)/search.tsx
+    └── Player search with autocomplete
+
+  app/(tabs)/_layout.tsx
+    └── Tab bar configuration (Ionicons, frosted glass, orange glow)
+
+  app/player/[playerId].tsx
+    └── Player detail card (season, career, sabermetrics, year-by-year)
+    └── Two-way player support (dual hitting + pitching sections)
+
+  app/game/[gamePk].tsx
+    └── Game box score detail screen
+
+  app/src/utils/cache.ts
+    └── AsyncStorage cache with TTL (time-to-live) expiration
+
+  app/src/theme/colors.ts
+    └── Color constants (METS_BLUE, METS_ORANGE, etc.)
+
+  app.json
+    └── Expo config: app name, slug, version, splash, icon
+
+  package.json
+    └── Dependencies, scripts, version number
+
+================================================================================
+ END OF RUNBOOK
+================================================================================
