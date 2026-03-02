@@ -23,6 +23,7 @@ import {
 } from '../src/api/mlb';
 import { getCached, invalidateCache } from '../src/utils/cache';
 import { theme } from '../src/theme/colors';
+import { useResponsive } from '../src/utils/useResponsive';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -167,6 +168,8 @@ export default function ScoresTab() {
     [],
   );
 
+  const { isTablet, gridCols, maxContentWidth, outerPadding, fontScale } = useResponsive();
+
   /* ---- Render --------------------------------------------------- */
 
   if (loading) {
@@ -180,12 +183,13 @@ export default function ScoresTab() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
       }
     >
+      <View style={maxContentWidth ? { width: '100%', maxWidth: maxContentWidth } : undefined}>
       {/* ── Player Search ──────────────────────────────────────── */}
       <View style={styles.searchWrapper}>
         <TextInput
@@ -193,7 +197,7 @@ export default function ScoresTab() {
           placeholderTextColor={theme.mutedText}
           value={searchQuery}
           onChangeText={(t) => void handleSearch(t)}
-          style={styles.searchInput}
+          style={[styles.searchInput, isTablet && { fontSize: 17, paddingVertical: 14 }]}
           autoCapitalize="words"
           returnKeyType="search"
         />
@@ -225,41 +229,79 @@ export default function ScoresTab() {
       </View>
 
       {/* ── Scoreboard ─────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Today's Games</Text>
+      <Text style={[styles.sectionTitle, isTablet && { fontSize: 23 * fontScale }]}>Today's Games</Text>
       {games.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.gameRow}
-        >
-          {games.map((game) => (
-            <Pressable
-              key={game.gamePk}
-              style={({ pressed }) => [styles.gameCard, pressed && styles.pressed]}
-              onPress={() =>
-                router.push({
-                  pathname: '/game/[gamePk]',
-                  params: { gamePk: String(game.gamePk) },
-                })
-              }
-            >
-              <Text style={styles.gameStatus}>{game.detailedState}</Text>
-              <View style={styles.gameTeamRow}>
-                <Text style={styles.gameTeamName}>{shortTeamName(game.awayTeam)}</Text>
-                <Text style={styles.gameScore}>{formatScore(game.awayScore)}</Text>
-              </View>
-              <View style={styles.gameTeamRow}>
-                <Text style={styles.gameTeamName}>{shortTeamName(game.homeTeam)}</Text>
-                <Text style={styles.gameScore}>{formatScore(game.homeScore)}</Text>
-              </View>
-              <Text style={styles.gameMeta}>
-                {game.inning
-                  ? `${game.inningState} ${game.inning}`
-                  : formatGameTime(game.startTime)}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        isTablet ? (
+          /* iPad: wrap game cards in a multi-column grid */
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {games.map((game) => (
+              <Pressable
+                key={game.gamePk}
+                style={({ pressed }) => [
+                  styles.gameCard,
+                  { width: `${Math.floor(100 / gridCols) - 2}%` as unknown as number, flexGrow: 0 },
+                  pressed && styles.pressed,
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: '/game/[gamePk]',
+                    params: { gamePk: String(game.gamePk) },
+                  })
+                }
+              >
+                <Text style={styles.gameStatus}>{game.detailedState}</Text>
+                <View style={styles.gameTeamRow}>
+                  <Text style={styles.gameTeamName}>{shortTeamName(game.awayTeam)}</Text>
+                  <Text style={styles.gameScore}>{formatScore(game.awayScore)}</Text>
+                </View>
+                <View style={styles.gameTeamRow}>
+                  <Text style={styles.gameTeamName}>{shortTeamName(game.homeTeam)}</Text>
+                  <Text style={styles.gameScore}>{formatScore(game.homeScore)}</Text>
+                </View>
+                <Text style={styles.gameMeta}>
+                  {game.inning
+                    ? `${game.inningState} ${game.inning}`
+                    : formatGameTime(game.startTime)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          /* Phone: horizontal scroll */
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.gameRow}
+          >
+            {games.map((game) => (
+              <Pressable
+                key={game.gamePk}
+                style={({ pressed }) => [styles.gameCard, pressed && styles.pressed]}
+                onPress={() =>
+                  router.push({
+                    pathname: '/game/[gamePk]',
+                    params: { gamePk: String(game.gamePk) },
+                  })
+                }
+              >
+                <Text style={styles.gameStatus}>{game.detailedState}</Text>
+                <View style={styles.gameTeamRow}>
+                  <Text style={styles.gameTeamName}>{shortTeamName(game.awayTeam)}</Text>
+                  <Text style={styles.gameScore}>{formatScore(game.awayScore)}</Text>
+                </View>
+                <View style={styles.gameTeamRow}>
+                  <Text style={styles.gameTeamName}>{shortTeamName(game.homeTeam)}</Text>
+                  <Text style={styles.gameScore}>{formatScore(game.homeScore)}</Text>
+                </View>
+                <Text style={styles.gameMeta}>
+                  {game.inning
+                    ? `${game.inningState} ${game.inning}`
+                    : formatGameTime(game.startTime)}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )
       ) : (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyText}>No games scheduled for today</Text>
@@ -269,7 +311,7 @@ export default function ScoresTab() {
       {/* ── Who's Hot ──────────────────────────────────────────── */}
       {leaders.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>
+          <Text style={[styles.sectionTitle, isTablet && { fontSize: 23 * fontScale }]}>
             Who's Hot 🔥{leadersSeason ? ` • ${leadersSeason}` : ''}
           </Text>
           {leadersIsFallback && (
@@ -277,9 +319,9 @@ export default function ScoresTab() {
               Showing last season's leaders — {new Date().getFullYear()} season hasn't started yet
             </Text>
           )}
-          <View style={styles.leadersCard}>
+          <View style={[styles.leadersCard, isTablet && { flexDirection: 'row', flexWrap: 'wrap', gap: 24 }]}>
             {leaders.map((cat) => (
-              <View key={cat.category} style={styles.leaderSection}>
+              <View key={cat.category} style={[styles.leaderSection, isTablet && { width: '46%' as unknown as number }]}>
                 <Text style={styles.leaderCatLabel}>{cat.categoryLabel}</Text>
                 {cat.leaders.slice(0, 3).map((leader) => (
                   <Pressable
@@ -320,17 +362,24 @@ export default function ScoresTab() {
       </View>
 
       {/* ── News ───────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Latest News</Text>
-      {news.map((item) => (
-        <Pressable
-          key={item.id}
-          style={({ pressed }) => [styles.newsCard, pressed && styles.pressed]}
-          onPress={() => void Linking.openURL(item.linkUrl)}
-        >
-          <Text style={styles.newsTitle}>{item.title}</Text>
-          <Text style={styles.newsMeta}>{item.publishedAt}</Text>
-        </Pressable>
-      ))}
+      <Text style={[styles.sectionTitle, isTablet && { fontSize: 23 * fontScale }]}>Latest News</Text>
+      <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 10 } : undefined}>
+        {news.map((item) => (
+          <Pressable
+            key={item.id}
+            style={({ pressed }) => [
+              styles.newsCard,
+              isTablet && { width: '48%' as unknown as number },
+              pressed && styles.pressed,
+            ]}
+            onPress={() => void Linking.openURL(item.linkUrl)}
+          >
+            <Text style={styles.newsTitle}>{item.title}</Text>
+            <Text style={styles.newsMeta}>{item.publishedAt}</Text>
+          </Pressable>
+        ))}
+      </View>
+      </View>{/* end maxContentWidth wrapper */}
     </ScrollView>
   );
 }

@@ -23,6 +23,7 @@ import {
 } from '../src/api/mlb';
 import { getCached, invalidateCache } from '../src/utils/cache';
 import { theme } from '../src/theme/colors';
+import { useResponsive } from '../src/utils/useResponsive';
 
 const FAV_TEAM_KEY = 'diamondstats:favoriteTeam';
 const TTL = {
@@ -214,6 +215,8 @@ export default function MyTeamTab() {
   /*  RENDER                                                          */
   /* ================================================================ */
 
+  const { isTablet, teamPickerCols, maxContentWidth, outerPadding } = useResponsive();
+
   /* Loading */
   if (viewState === 'loading') {
     return (
@@ -225,26 +228,29 @@ export default function MyTeamTab() {
 
   /* Team picker */
   if (viewState === 'picking') {
+    const cellWidth = `${Math.floor(100 / teamPickerCols) - 3}%` as unknown as number;
     return (
-      <ScrollView style={styles.screen} contentContainerStyle={styles.pickerContent}>
-        <Text style={styles.pickerTitle}>Choose Your Team</Text>
-        <Text style={styles.pickerSub}>Pick your favorite team to personalize your experience.</Text>
+      <ScrollView style={styles.screen} contentContainerStyle={[styles.pickerContent, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}>
+        <View style={maxContentWidth ? { width: '100%', maxWidth: maxContentWidth } : undefined}>
+        <Text style={[styles.pickerTitle, isTablet && { fontSize: 30 }]}>Choose Your Team</Text>
+        <Text style={[styles.pickerSub, isTablet && { fontSize: 16 }]}>Pick your favorite team to personalize your experience.</Text>
         <View style={styles.teamGrid}>
           {allTeams.map((team) => (
             <Pressable
               key={team.id}
-              style={({ pressed }) => [styles.teamCell, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.teamCell, isTablet && { width: cellWidth, paddingVertical: 18 }, pressed && styles.pressed]}
               onPress={() => void selectTeam(team)}
             >
               <Image
                 source={{ uri: `https://midfield.mlbstatic.com/v1/team/${team.id}/spots/72` }}
-                style={styles.teamCellLogo}
+                style={[styles.teamCellLogo, isTablet && { width: 64, height: 64, borderRadius: 32 }]}
               />
-              <Text style={styles.teamCellName} numberOfLines={1}>
+              <Text style={[styles.teamCellName, isTablet && { fontSize: 14 }]} numberOfLines={1}>
                 {team.name.split(' ').pop()}
               </Text>
             </Pressable>
           ))}
+        </View>
         </View>
       </ScrollView>
     );
@@ -254,21 +260,22 @@ export default function MyTeamTab() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
       }
     >
+      <View style={maxContentWidth ? { width: '100%', maxWidth: maxContentWidth } : undefined}>
       {/* ── Team header ────────────────────────────────────────── */}
       <View style={styles.teamHeader}>
         <Image
           source={{ uri: `https://midfield.mlbstatic.com/v1/team/${favTeam!.id}/spots/72` }}
-          style={styles.teamHeaderLogo}
+          style={[styles.teamHeaderLogo, isTablet && { width: 80, height: 80, borderRadius: 40 }]}
         />
         <View style={styles.teamHeaderInfo}>
-          <Text style={styles.teamHeaderName}>{favTeam!.name}</Text>
+          <Text style={[styles.teamHeaderName, isTablet && { fontSize: 28 }]}>{favTeam!.name}</Text>
           {teamStanding ? (
-            <Text style={styles.teamHeaderRecord}>
+            <Text style={[styles.teamHeaderRecord, isTablet && { fontSize: 16 }]}>
               {teamStanding.wins}-{teamStanding.losses} • {teamStanding.divisionName} •{' '}
               {teamStanding.gamesBack === '-' ? '1st' : `${teamStanding.gamesBack} GB`}
             </Text>
@@ -280,8 +287,10 @@ export default function MyTeamTab() {
 
       {teamLoading && <ActivityIndicator color={theme.primary} />}
 
-      {/* ── Next Game ──────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Next Game</Text>
+      {/* ── Next Game & Last Result ──────────────────────────────── */}
+      <View style={isTablet ? { flexDirection: 'row', gap: 12 } : undefined}>
+        <View style={isTablet ? { flex: 1 } : undefined}>
+          <Text style={[styles.sectionTitle, isTablet && { fontSize: 20 }]}>Next Game</Text>
       {nextGame ? (
         <Pressable
           style={({ pressed }) => [styles.gameCard, pressed && styles.pressed]}
@@ -303,9 +312,11 @@ export default function MyTeamTab() {
           <Text style={styles.emptyText}>No upcoming games scheduled</Text>
         </View>
       )}
+        </View>
 
       {/* ── Last Result ────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Last Result</Text>
+        <View style={isTablet ? { flex: 1 } : undefined}>
+          <Text style={[styles.sectionTitle, isTablet && { fontSize: 20 }]}>Last Result</Text>
       {lastGame ? (
         <Pressable
           style={({ pressed }) => [styles.gameCard, pressed && styles.pressed]}
@@ -343,45 +354,54 @@ export default function MyTeamTab() {
           <Text style={styles.emptyText}>No recent results</Text>
         </View>
       )}
+        </View>{/* end last result column */}
+      </View>{/* end side-by-side games row */}
 
       {/* ── Roster ─────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Roster</Text>
+      <Text style={[styles.sectionTitle, isTablet && { fontSize: 20 }]}>Roster</Text>
       {rosterByGroup.map((group) => (
         <View key={group.group} style={styles.rosterGroup}>
           <Text style={styles.rosterGroupTitle}>{group.group}</Text>
-          {group.players.map((player) => (
-            <Pressable
-              key={player.id}
-              style={({ pressed }) => [styles.rosterRow, pressed && styles.pressed]}
-              onPress={() =>
-                router.push({
-                  pathname: '/player/[playerId]',
-                  params: {
-                    playerId: String(player.id),
-                    name: player.fullName,
-                    team: favTeam!.name,
-                    position: player.position,
-                  },
-                })
-              }
-            >
-              <Text style={styles.rosterName}>{player.fullName}</Text>
-              <Text style={styles.rosterMeta}>
-                {player.position}
-                {player.jerseyNumber ? ` • #${player.jerseyNumber}` : ''}
-              </Text>
-            </Pressable>
-          ))}
+          <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 8 } : undefined}>
+            {group.players.map((player) => (
+              <Pressable
+                key={player.id}
+                style={({ pressed }) => [
+                  styles.rosterRow,
+                  isTablet && { width: '48%' as unknown as number },
+                  pressed && styles.pressed,
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: '/player/[playerId]',
+                    params: {
+                      playerId: String(player.id),
+                      name: player.fullName,
+                      team: favTeam!.name,
+                      position: player.position,
+                    },
+                  })
+                }
+              >
+                <Text style={styles.rosterName}>{player.fullName}</Text>
+                <Text style={styles.rosterMeta}>
+                  {player.position}
+                  {player.jerseyNumber ? ` • #${player.jerseyNumber}` : ''}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       ))}
 
       {/* ── Change team ────────────────────────────────────────── */}
       <Pressable
-        style={({ pressed }) => [styles.changeBtn, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.changeBtn, isTablet && { maxWidth: 300, alignSelf: 'center', width: '100%' }, pressed && styles.pressed]}
         onPress={() => void changeTeam()}
       >
         <Text style={styles.changeBtnText}>Change Team</Text>
       </Pressable>
+      </View>{/* end maxContentWidth wrapper */}
     </ScrollView>
   );
 }

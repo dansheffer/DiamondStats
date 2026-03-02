@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { searchPlayersByName, type PlayerSearchResult } from '../src/api/mlb';
 import { theme } from '../src/theme/colors';
+import { useResponsive } from '../src/utils/useResponsive';
 
 export default function SearchTab() {
   const router = useRouter();
@@ -45,14 +46,17 @@ export default function SearchTab() {
     }
   }, [query]);
 
+  const { isTablet, gridCols, maxContentWidth, outerPadding } = useResponsive();
+
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.heading}>Find a Player</Text>
-      <Text style={styles.sub}>
+      <View style={maxContentWidth ? { width: '100%', maxWidth: maxContentWidth } : undefined}>
+      <Text style={[styles.heading, isTablet && { fontSize: 30 }]}>Find a Player</Text>
+      <Text style={[styles.sub, isTablet && { fontSize: 16 }]}>
         Search any MLB player to see their baseball-card-style profile.
       </Text>
 
@@ -62,47 +66,53 @@ export default function SearchTab() {
           placeholderTextColor={theme.mutedText}
           value={query}
           onChangeText={setQuery}
-          style={styles.input}
+          style={[styles.input, isTablet && { fontSize: 17, paddingVertical: 14 }]}
           autoCapitalize="words"
           returnKeyType="search"
           onSubmitEditing={() => void handleSearch()}
         />
         <Pressable
-          style={({ pressed }) => [styles.searchBtn, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.searchBtn, isTablet && { paddingHorizontal: 24, paddingVertical: 14 }, pressed && styles.pressed]}
           onPress={() => void handleSearch()}
         >
-          <Text style={styles.searchBtnText}>Search</Text>
+          <Text style={[styles.searchBtnText, isTablet && { fontSize: 17 }]}>Search</Text>
         </Pressable>
       </View>
 
       {loading && <ActivityIndicator color={theme.primary} style={styles.loader} />}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      {results.map((player) => (
-        <Pressable
-          key={player.id}
-          style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}
-          onPress={() =>
-            router.push({
-              pathname: '/player/[playerId]',
-              params: {
-                playerId: String(player.id),
-                name: player.fullName,
-                team: player.teamName,
-                position: player.position,
-              },
-            })
-          }
-        >
-          <View style={styles.resultInfo}>
-            <Text style={styles.resultName}>{player.fullName}</Text>
-            <Text style={styles.resultMeta}>
-              {player.position} • {player.teamName}
-            </Text>
-          </View>
-          <Text style={styles.openLabel}>View →</Text>
-        </Pressable>
-      ))}
+      <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 10 } : undefined}>
+        {results.map((player) => (
+          <Pressable
+            key={player.id}
+            style={({ pressed }) => [
+              styles.resultRow,
+              isTablet && { width: `${Math.floor(100 / gridCols) - 2}%` as unknown as number },
+              pressed && styles.pressed,
+            ]}
+            onPress={() =>
+              router.push({
+                pathname: '/player/[playerId]',
+                params: {
+                  playerId: String(player.id),
+                  name: player.fullName,
+                  team: player.teamName,
+                  position: player.position,
+                },
+              })
+            }
+          >
+            <View style={styles.resultInfo}>
+              <Text style={styles.resultName}>{player.fullName}</Text>
+              <Text style={styles.resultMeta}>
+                {player.position} • {player.teamName}
+              </Text>
+            </View>
+            <Text style={styles.openLabel}>View →</Text>
+          </Pressable>
+        ))}
+      </View>
 
       {!loading && !error && hasSearched && results.length === 0 && (
         <View style={styles.emptyCard}>
@@ -113,13 +123,14 @@ export default function SearchTab() {
       {!hasSearched && (
         <View style={styles.hintCard}>
           <Text style={styles.hintTitle}>💡 Tips</Text>
-          <Text style={styles.hintText}>
+          <Text style={[styles.hintText, isTablet && { fontSize: 15 }]}>
             • Try full names: "Shohei Ohtani"{'\n'}
             • Or last names: "Judge"{'\n'}
             • Tap any result to see their full stats card
           </Text>
         </View>
       )}
+      </View>{/* end maxContentWidth wrapper */}
     </ScrollView>
   );
 }

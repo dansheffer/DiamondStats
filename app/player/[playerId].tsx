@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import PlayerAvatar from '../src/components/PlayerAvatar';
 import { fetchPlayerCardData, type AdvancedSabermetrics, type PlayerCardData } from '../src/api/mlb';
 import { theme } from '../src/theme/colors';
+import { useResponsive } from '../src/utils/useResponsive';
 
 const HITTING_STAT_KEYS: Array<{ key: string; label: string }> = [
   { key: 'gamesPlayed', label: 'Games' },
@@ -124,6 +125,7 @@ export default function PlayerCardScreen() {
   );
 
   const currentYear = new Date().getFullYear();
+  const { isTablet, saberCols, maxContentWidth, outerPadding } = useResponsive();
   const yearByYearHitting = playerData?.yearByYearHitting ?? [];
   const yearByYearPitching = playerData?.yearByYearPitching ?? [];
   const yearByYear = isTwoWay
@@ -135,18 +137,18 @@ export default function PlayerCardScreen() {
   const seasonHasData = seasonRows.length > 0;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.cardFrame}>
+    <ScrollView contentContainerStyle={[styles.container, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}>
+      <View style={[styles.cardFrame, maxContentWidth ? { maxWidth: maxContentWidth, width: '100%' } : undefined]}>
         <View style={styles.cardRibbon}>
           <Text style={styles.cardRibbonText}>DIAMOND STATS PLAYER CARD</Text>
         </View>
 
         <View style={styles.card}>
         <View style={styles.headerRow}>
-          <PlayerAvatar mlbId={Number(playerId)} size={78} />
+          <PlayerAvatar mlbId={Number(playerId)} size={isTablet ? 100 : 78} />
           <View style={styles.headerTextWrap}>
-            <Text style={styles.playerName}>{resolvedName}</Text>
-            <Text style={styles.playerMeta}>
+            <Text style={[styles.playerName, isTablet && { fontSize: 30 }]}>{resolvedName}</Text>
+            <Text style={[styles.playerMeta, isTablet && { fontSize: 16 }]}>
               {resolvedPosition} • {resolvedTeam}
             </Text>
           </View>
@@ -228,13 +230,13 @@ export default function PlayerCardScreen() {
             {/* ── Advanced Sabermetrics ────────────────────────── */}
             {playerData?.careerAdvancedHitting && hasAnySabermetric(playerData.careerAdvancedHitting) && (
               <Section title="Advanced Sabermetrics • Hitting">
-                <SabermetricGrid stats={playerData.careerAdvancedHitting} type="hitting" />
+                <SabermetricGrid stats={playerData.careerAdvancedHitting} type="hitting" cols={saberCols} />
                 <Text style={styles.saberNote}>Career advanced metrics via MLB Stats API</Text>
               </Section>
             )}
             {playerData?.careerAdvancedPitching && hasAnySabermetric(playerData.careerAdvancedPitching) && (
               <Section title={isTwoWay ? 'Advanced Sabermetrics • Pitching' : 'Advanced Sabermetrics'}>
-                <SabermetricGrid stats={playerData.careerAdvancedPitching} type="pitching" />
+                <SabermetricGrid stats={playerData.careerAdvancedPitching} type="pitching" cols={saberCols} />
                 <Text style={styles.saberNote}>Career advanced metrics via MLB Stats API</Text>
               </Section>
             )}
@@ -392,7 +394,7 @@ const PITCHING_SABER_ITEMS: Array<{ key: keyof AdvancedSabermetrics; label: stri
   { key: 'qualityStarts', label: 'QS', description: 'Quality Starts' },
 ];
 
-function SabermetricGrid({ stats, type }: { stats: AdvancedSabermetrics; type: 'hitting' | 'pitching' }) {
+function SabermetricGrid({ stats, type, cols = 2 }: { stats: AdvancedSabermetrics; type: 'hitting' | 'pitching'; cols?: number }) {
   const items = type === 'hitting' ? HITTING_SABER_ITEMS : PITCHING_SABER_ITEMS;
   const available = items.filter((item) => stats[item.key] !== null && stats[item.key] !== undefined);
 
@@ -400,10 +402,12 @@ function SabermetricGrid({ stats, type }: { stats: AdvancedSabermetrics; type: '
     return <Text style={styles.emptyText}>Advanced metrics not available.</Text>;
   }
 
+  const cellWidth = `${Math.floor(100 / cols) - 3}%` as unknown as number;
+
   return (
     <View style={styles.saberGrid}>
       {available.map((item) => (
-        <View key={item.key} style={styles.saberCell}>
+        <View key={item.key} style={[styles.saberCell, { width: cellWidth }]}>
           <Text style={styles.saberValue}>{String(stats[item.key])}</Text>
           <Text style={styles.saberLabel}>{item.label}</Text>
           <Text style={styles.saberDesc}>{item.description}</Text>
@@ -594,7 +598,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   saberCell: {
-    width: '47%' as unknown as number,
     backgroundColor: '#f0f5ff',
     borderRadius: 8,
     padding: 10,

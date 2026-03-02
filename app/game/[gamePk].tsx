@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { useLocalSearchParams } from 'expo-router';
 import { fetchGameBoxScore, type BoxScoreSummary } from '../src/api/mlb';
 import { theme } from '../src/theme/colors';
+import { useResponsive } from '../src/utils/useResponsive';
 
 export default function GameBoxScoreScreen() {
   const { gamePk } = useLocalSearchParams<{ gamePk: string }>();
@@ -51,9 +52,11 @@ export default function GameBoxScoreScreen() {
   }, [gamePk]);
 
   const innings = useMemo(() => box?.inningLines ?? [], [box?.inningLines]);
+  const { isTablet, maxContentWidth, outerPadding } = useResponsive();
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}>
+      <View style={maxContentWidth ? { maxWidth: maxContentWidth, width: '100%', gap: 12 } : { gap: 12 }}>
       <View style={styles.digitalCard}>
         {loading ? <ActivityIndicator color="#67e8f9" /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -62,12 +65,12 @@ export default function GameBoxScoreScreen() {
           <>
             <Text style={styles.stateText}>{box.detailedState}</Text>
             <View style={styles.scoreRow}>
-              <Text style={styles.team}>{box.awayTeam}</Text>
-              <Text style={styles.score}>{box.awayRuns}</Text>
+              <Text style={[styles.team, isTablet && { fontSize: 20 }]}>{box.awayTeam}</Text>
+              <Text style={[styles.score, isTablet && { fontSize: 36 }]}>{box.awayRuns}</Text>
             </View>
             <View style={styles.scoreRow}>
-              <Text style={styles.team}>{box.homeTeam}</Text>
-              <Text style={styles.score}>{box.homeRuns}</Text>
+              <Text style={[styles.team, isTablet && { fontSize: 20 }]}>{box.homeTeam}</Text>
+              <Text style={[styles.score, isTablet && { fontSize: 36 }]}>{box.homeRuns}</Text>
             </View>
             <Text style={styles.inningText}>
               {box.inning ? `${box.inningState} ${box.inning}` : 'Pregame'}
@@ -77,15 +80,15 @@ export default function GameBoxScoreScreen() {
       </View>
 
       {box ? (
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>R / H / E</Text>
-          <View style={styles.rheRow}>
+        <View style={[styles.infoCard, isTablet && { flexDirection: 'row', flexWrap: 'wrap', gap: 16 }]}>
+          <Text style={[styles.infoTitle, isTablet && { width: '100%' }]}>R / H / E</Text>
+          <View style={[styles.rheRow, isTablet && { flex: 1 }]}>
             <Text style={styles.rheTeam}>{box.awayTeam}</Text>
             <Text style={styles.rheValue}>
               {box.awayRuns} / {box.awayHits} / {box.awayErrors}
             </Text>
           </View>
-          <View style={styles.rheRow}>
+          <View style={[styles.rheRow, isTablet && { flex: 1 }]}>
             <Text style={styles.rheTeam}>{box.homeTeam}</Text>
             <Text style={styles.rheValue}>
               {box.homeRuns} / {box.homeHits} / {box.homeErrors}
@@ -97,15 +100,18 @@ export default function GameBoxScoreScreen() {
       {innings.length > 0 ? (
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Inning Lines</Text>
-          {innings.map((line) => (
-            <View key={line.inning} style={styles.inningRow}>
-              <Text style={styles.inningNumber}>#{line.inning}</Text>
-              <Text style={styles.inningRuns}>Away {line.awayRuns ?? '-'}</Text>
-              <Text style={styles.inningRuns}>Home {line.homeRuns ?? '-'}</Text>
-            </View>
-          ))}
+          <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 8 } : undefined}>
+            {innings.map((line) => (
+              <View key={line.inning} style={[styles.inningRow, isTablet && { width: '48%' as unknown as number }]}>
+                <Text style={styles.inningNumber}>#{line.inning}</Text>
+                <Text style={styles.inningRuns}>Away {line.awayRuns ?? '-'}</Text>
+                <Text style={styles.inningRuns}>Home {line.homeRuns ?? '-'}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       ) : null}
+      </View>{/* end maxContentWidth wrapper */}
     </ScrollView>
   );
 }

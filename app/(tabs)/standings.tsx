@@ -14,6 +14,7 @@ import {
 } from '../src/api/mlb';
 import { getCached, invalidateCache } from '../src/utils/cache';
 import { theme } from '../src/theme/colors';
+import { useResponsive } from '../src/utils/useResponsive';
 
 const STANDINGS_TTL = 15 * 60 * 1000; // 15 min
 
@@ -84,6 +85,8 @@ export default function StandingsTab() {
 
   /* ---- Render --------------------------------------------------- */
 
+  const { isTablet, maxContentWidth, outerPadding, fontScale } = useResponsive();
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -95,12 +98,12 @@ export default function StandingsTab() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
       }
     >
-      <View style={styles.surface}>
+      <View style={[styles.surface, maxContentWidth ? { maxWidth: maxContentWidth, width: '100%' } : undefined]}>
         {/* Tab header */}
         <View style={styles.topTabs}>
           <View style={[styles.topTab, styles.topTabActive]}>
@@ -114,11 +117,52 @@ export default function StandingsTab() {
         {standingsByLeague.map((leagueBlock) => (
           <View key={leagueBlock.league}>
             <View style={styles.leagueHeaderRow}>
-              <Text style={styles.leagueHeaderText}>{leagueBlock.league}</Text>
+              <Text style={[styles.leagueHeaderText, isTablet && { fontSize: 24 * fontScale }]}>{leagueBlock.league}</Text>
             </View>
 
             {leagueBlock.divisions.map((divisionBlock) => (
               <View key={`${leagueBlock.league}-${divisionBlock.division}`}>
+                {isTablet ? (
+                  /* iPad: no horizontal scroll needed — table fits */
+                  <View style={styles.table}>
+                    <View style={styles.divHeaderRow}>
+                      <View style={[styles.teamCol, isTablet && { width: 160 }]}>
+                        <Text style={styles.divLabel}>{divisionBlock.division}</Text>
+                      </View>
+                      <Text style={[styles.colLabel, styles.colW, isTablet && { width: 48 }]}>W</Text>
+                      <Text style={[styles.colLabel, styles.colL, isTablet && { width: 48 }]}>L</Text>
+                      <Text style={[styles.colLabel, styles.colPct, isTablet && { width: 60 }]}>PCT</Text>
+                      <Text style={[styles.colLabel, styles.colGb, isTablet && { width: 52 }]}>GB</Text>
+                      <Text style={[styles.colLabel, styles.colL10, isTablet && { width: 52 }]}>L10</Text>
+                      <Text style={[styles.colLabel, styles.colStrk, isTablet && { width: 56 }]}>STRK</Text>
+                      <Text style={[styles.colLabel, styles.colRs, isTablet && { width: 56 }]}>RS</Text>
+                    </View>
+                    {divisionBlock.rows
+                      .slice()
+                      .sort((a, b) => a.divisionRank - b.divisionRank)
+                      .map((row) => (
+                        <View key={row.id} style={styles.teamRow}>
+                          <View style={[styles.teamCol, isTablet && { width: 160 }]}>
+                            <Image
+                              source={{
+                                uri: `https://midfield.mlbstatic.com/v1/team/${row.teamId}/spots/72`,
+                              }}
+                              style={[styles.teamLogo, isTablet && { width: 36, height: 36, borderRadius: 18 }]}
+                            />
+                            <Text style={[styles.teamAbbrev, isTablet && { fontSize: 16 }]}>{row.teamAbbrev}</Text>
+                          </View>
+                          <Text style={[styles.stat, styles.colW, isTablet && { width: 48, fontSize: 15 }]}>{row.wins}</Text>
+                          <Text style={[styles.stat, styles.colL, isTablet && { width: 48, fontSize: 15 }]}>{row.losses}</Text>
+                          <Text style={[styles.statBold, styles.colPct, isTablet && { width: 60, fontSize: 15 }]}>{row.winPct}</Text>
+                          <Text style={[styles.stat, styles.colGb, isTablet && { width: 52, fontSize: 15 }]}>{row.gamesBack}</Text>
+                          <Text style={[styles.stat, styles.colL10, isTablet && { width: 52, fontSize: 15 }]}>{row.lastTenRecord}</Text>
+                          <Text style={[styles.stat, styles.colStrk, isTablet && { width: 56, fontSize: 15 }]}>{row.streak}</Text>
+                          <Text style={[styles.stat, styles.colRs, isTablet && { width: 56, fontSize: 15 }]}>{row.runsScored}</Text>
+                        </View>
+                      ))}
+                  </View>
+                ) : (
+                  /* Phone: horizontal scroll for table */
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={styles.table}>
                     {/* Column headers */}
@@ -161,6 +205,7 @@ export default function StandingsTab() {
                       ))}
                   </View>
                 </ScrollView>
+                )}
               </View>
             ))}
           </View>
