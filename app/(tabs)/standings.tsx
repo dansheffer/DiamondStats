@@ -49,6 +49,12 @@ export default function StandingsTab() {
     setRefreshing(false);
   }, [loadData]);
 
+  /** true if every team is 0-0 (pre-season / spring training) */
+  const isPreSeason = useMemo(
+    () => standings.length > 0 && standings.every((r) => r.wins === 0 && r.losses === 0),
+    [standings],
+  );
+
   /* Group standings: league → division */
   const standingsByLeague = useMemo(() => {
     const grouped = standings.reduce<Record<string, Record<string, StandingRow[]>>>(
@@ -113,6 +119,14 @@ export default function StandingsTab() {
             <Text style={styles.topTabText}>Wild Card</Text>
           </View>
         </View>
+
+        {isPreSeason && (
+          <View style={styles.preSeasonBanner}>
+            <Text style={styles.preSeasonText}>
+              🌴 Spring Training — Regular season standings will update once the season begins
+            </Text>
+          </View>
+        )}
 
         {standingsByLeague.map((leagueBlock) => (
           <View key={leagueBlock.league}>
@@ -283,4 +297,18 @@ const styles = StyleSheet.create({
   teamAbbrev: { color: '#e5e7eb', fontSize: 14, fontWeight: '700' },
   stat: { color: '#d1d5db', fontSize: 13, fontWeight: '600', textAlign: 'center' },
   statBold: { color: '#ffffff', fontSize: 13, fontWeight: '800', textAlign: 'center' },
+
+  preSeasonBanner: {
+    backgroundColor: '#0d1a2e',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1e2636',
+  },
+  preSeasonText: {
+    color: '#6ee7b7',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
 });

@@ -230,6 +230,11 @@ export default function ScoresTab() {
 
       {/* ── Scoreboard ─────────────────────────────────────────── */}
       <Text style={[styles.sectionTitle, isTablet && { fontSize: 23 * fontScale }]}>Today's Games</Text>
+      {games.length > 0 && games[0].gameType === 'S' && (
+        <View style={styles.springBadge}>
+          <Text style={styles.springBadgeText}>🌴 Spring Training</Text>
+        </View>
+      )}
       {games.length > 0 ? (
         isTablet ? (
           /* iPad: wrap game cards in a multi-column grid */
@@ -532,4 +537,20 @@ const styles = StyleSheet.create({
   },
   emptyText: { color: theme.mutedText, fontWeight: '600' },
   pressed: { opacity: 0.85 },
+
+  /* Spring Training badge */
+  springBadge: {
+    backgroundColor: '#ecfdf5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#6ee7b7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignSelf: 'flex-start',
+  },
+  springBadgeText: {
+    color: '#047857',
+    fontWeight: '800',
+    fontSize: 12,
+  },
 });

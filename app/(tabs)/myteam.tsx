@@ -340,10 +340,14 @@ export default function MyTeamTab() {
               {lastGame.isHome
                 ? lastGame.homeScore > lastGame.awayScore
                   ? 'W'
-                  : 'L'
+                  : lastGame.homeScore < lastGame.awayScore
+                    ? 'L'
+                    : 'T'
                 : lastGame.awayScore > lastGame.homeScore
                   ? 'W'
-                  : 'L'}
+                  : lastGame.awayScore < lastGame.homeScore
+                    ? 'L'
+                    : 'T'}
             </Text>
           ) : (
             <Text style={styles.gameTime}>{lastGame.detailedState}</Text>

@@ -46,6 +46,8 @@ export interface TodayGame {
   inning: number | null;
   inningState: string;
   startTime: string;
+  /** 'S' = Spring Training, 'R' = Regular, 'F'/'D'/'L'/'W' = Postseason */
+  gameType: string;
 }
 
 export interface InningLine {
@@ -329,6 +331,7 @@ export async function fetchTodayGames(): Promise<TodayGame[]> {
         inning: typeof linescore.currentInning === 'number' ? linescore.currentInning : null,
         inningState: String(linescore.inningState ?? ''),
         startTime: String(game.gameDate ?? ''),
+        gameType: String(game.gameType ?? 'R'),
       };
     },
   );
@@ -337,16 +340,24 @@ export async function fetchTodayGames(): Promise<TodayGame[]> {
 }
 
 export async function fetchGameBoxScore(gamePk: number): Promise<BoxScoreSummary> {
-  const data = await fetchJson(`${MLB_STATS_API_BASE}/game/${gamePk}/linescore`);
+  // Use the live game feed — it has team names, status, AND linescore in one call.
+  const data = await fetchJson(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`);
 
-  const teams = (data.teams as Record<string, unknown> | undefined) ?? {};
-  const away = (teams.away as Record<string, unknown> | undefined) ?? {};
-  const home = (teams.home as Record<string, unknown> | undefined) ?? {};
-  const awayTeam = (away.team as Record<string, unknown> | undefined) ?? {};
-  const homeTeam = (home.team as Record<string, unknown> | undefined) ?? {};
-  const statusObj = (data.status as Record<string, unknown> | undefined) ?? {};
+  const gameData = (data.gameData as Record<string, unknown> | undefined) ?? {};
+  const liveData = (data.liveData as Record<string, unknown> | undefined) ?? {};
+  const linescore = (liveData.linescore as Record<string, unknown> | undefined) ?? {};
 
-  const innings = (data.innings as Array<Record<string, unknown>> | undefined) ?? [];
+  const gdTeams = (gameData.teams as Record<string, unknown> | undefined) ?? {};
+  const gdAway = (gdTeams.away as Record<string, unknown> | undefined) ?? {};
+  const gdHome = (gdTeams.home as Record<string, unknown> | undefined) ?? {};
+
+  const lsTeams = (linescore.teams as Record<string, unknown> | undefined) ?? {};
+  const lsAway = (lsTeams.away as Record<string, unknown> | undefined) ?? {};
+  const lsHome = (lsTeams.home as Record<string, unknown> | undefined) ?? {};
+
+  const statusObj = (gameData.status as Record<string, unknown> | undefined) ?? {};
+
+  const innings = (linescore.innings as Array<Record<string, unknown>> | undefined) ?? [];
   const inningLines: InningLine[] = innings.map((inning, idx) => {
     const inningAway = (inning.away as Record<string, unknown> | undefined) ?? {};
     const inningHome = (inning.home as Record<string, unknown> | undefined) ?? {};
@@ -359,17 +370,17 @@ export async function fetchGameBoxScore(gamePk: number): Promise<BoxScoreSummary
 
   return {
     gamePk,
-    awayTeam: String(awayTeam.name ?? 'Away'),
-    homeTeam: String(homeTeam.name ?? 'Home'),
-    awayRuns: Number(away.runs ?? 0),
-    homeRuns: Number(home.runs ?? 0),
-    awayHits: Number(away.hits ?? 0),
-    homeHits: Number(home.hits ?? 0),
-    awayErrors: Number(away.errors ?? 0),
-    homeErrors: Number(home.errors ?? 0),
+    awayTeam: String(gdAway.name ?? 'Away'),
+    homeTeam: String(gdHome.name ?? 'Home'),
+    awayRuns: Number(lsAway.runs ?? 0),
+    homeRuns: Number(lsHome.runs ?? 0),
+    awayHits: Number(lsAway.hits ?? 0),
+    homeHits: Number(lsHome.hits ?? 0),
+    awayErrors: Number(lsAway.errors ?? 0),
+    homeErrors: Number(lsHome.errors ?? 0),
     detailedState: String(statusObj.detailedState ?? 'Scheduled'),
-    inning: typeof data.currentInning === 'number' ? data.currentInning : null,
-    inningState: String(data.inningState ?? ''),
+    inning: typeof linescore.currentInning === 'number' ? linescore.currentInning : null,
+    inningState: String(linescore.inningState ?? ''),
     inningLines,
   };
 }
@@ -438,25 +449,6 @@ function getSplitForSeason(
     splits.find((split) => split.stat !== undefined) ??
     splits[0]
   );
-}
-
-function pickStatsByType(
-  stats: Array<Record<string, unknown>>,
-  typeName: string,
-  season?: string,
-): Record<string, string | number> {
-  const matches = stats.filter((item) => getTypeName(item) === typeName.toLowerCase());
-
-  for (const entry of matches) {
-    const splits = (entry.splits as Array<Record<string, unknown>> | undefined) ?? [];
-    const chosenSplit = season ? getSplitForSeason(splits, season) : splits[0];
-    const map = toStatsMap(chosenSplit);
-    if (Object.keys(map).length > 0) {
-      return map;
-    }
-  }
-
-  return {};
 }
 
 function pickStatsByTypeAndGroup(
@@ -615,9 +607,9 @@ export async function fetchPlayerCardData(playerId: number): Promise<PlayerCardD
   const isTwoWay = posAbbrev.toUpperCase() === 'TWP';
 
   // For two-way players pick the group with more career data as "primary"
-  const careerHitting = pickStatsByType(stats, 'career');
+  const careerHitting = pickStatsByTypeAndGroup(stats, 'career', 'hitting');
   const careerPitching = pickStatsByTypeAndGroup(stats, 'career', 'pitching');
-  const seasonHitting = pickStatsByType(stats, 'season', season);
+  const seasonHitting = pickStatsByTypeAndGroup(stats, 'season', 'hitting', season);
   const seasonPitching = pickStatsByTypeAndGroup(stats, 'season', 'pitching', season);
 
   const isPitcher = ['P', 'SP', 'RP', 'CP'].includes(posAbbrev.toUpperCase());

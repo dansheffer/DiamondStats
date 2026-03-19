@@ -4,6 +4,21 @@ All notable changes to **DiamondStats** will be documented in this file.
 
 ---
 
+## [1.1.0] – 2026-03-19
+
+### Bug Fixes
+- **Box Score: team names now show correctly** — Switched from `/game/{id}/linescore` (which doesn't return team names) to the live game feed endpoint. Box score now properly displays real team names instead of "Away" / "Home".
+- **Box Score: game status now displays** — The old linescore endpoint lacked a `status` field, so the detailed state (e.g. "In Progress", "Final") was always falling back to "Scheduled". Fixed.
+- **Fragile stat picking** — Career/season hitting stats now explicitly filter by the `hitting` group instead of grabbing the first available stat entry (which could be pitching stats for TWP or pitchers).
+- **Tie game handling** — My Team "Last Result" now correctly shows "T" for tied games (common in Spring Training) instead of incorrectly labeling a tie as "L".
+
+### Added
+- **Spring Training badge** — Home screen scoreboard shows a 🌴 Spring Training pill when today's games are ST type.
+- **Standings pre-season banner** — When all teams show 0-0, a green banner explains that regular season standings will update once the season begins.
+- `gameType` field on `TodayGame` interface to distinguish Spring Training, Regular Season, and Postseason.
+
+---
+
 ## [1.0.0] – 2026-03-01
 
 ### Added
