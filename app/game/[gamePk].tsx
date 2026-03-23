@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { fetchGameBoxScore, type BoxScoreSummary } from '../src/api/mlb';
-import { theme } from '../src/theme/colors';
-import { useResponsive } from '../src/utils/useResponsive';
+import { fetchGameBoxScore, type BoxScoreSummary } from '../../src/api/mlb';
+import { theme, shadows, radii } from '../../src/theme/colors';
+import { useResponsive } from '../../src/utils/useResponsive';
 
 export default function GameBoxScoreScreen() {
   const { gamePk } = useLocalSearchParams<{ gamePk: string }>();
@@ -13,6 +13,7 @@ export default function GameBoxScoreScreen() {
 
   useEffect(() => {
     let mounted = true;
+    let isFirstLoad = true;
 
     const load = async () => {
       if (!gamePk) {
@@ -21,7 +22,10 @@ export default function GameBoxScoreScreen() {
         return;
       }
 
-      setLoading(true);
+      // Only show loading spinner on the initial load, not background refreshes
+      if (isFirstLoad) {
+        setLoading(true);
+      }
       setError(null);
       try {
         const data = await fetchGameBoxScore(Number(gamePk));
@@ -35,6 +39,7 @@ export default function GameBoxScoreScreen() {
       } finally {
         if (mounted) {
           setLoading(false);
+          isFirstLoad = false;
         }
       }
     };
@@ -121,21 +126,24 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: theme.background,
     padding: 14,
+    paddingBottom: 100,
     gap: 12,
   },
   digitalCard: {
-    backgroundColor: '#0b1020',
-    borderRadius: 12,
+    backgroundColor: theme.navyGlass,
+    borderRadius: radii.lg,
+    padding: 16,
+    gap: 10,
     borderWidth: 1,
-    borderColor: '#1f2937',
-    padding: 14,
-    gap: 8,
+    borderColor: theme.navyGlassBorder,
+    ...shadows.lg,
   },
   stateText: {
-    color: '#67e8f9',
+    color: 'rgba(255,255,255,0.7)',
     textTransform: 'uppercase',
     fontWeight: '800',
     fontSize: 12,
+    letterSpacing: 0.5,
   },
   scoreRow: {
     flexDirection: 'row',
@@ -143,19 +151,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   team: {
-    color: '#e5e7eb',
+    color: '#ffffff',
     fontWeight: '700',
     fontSize: 16,
     flex: 1,
     marginRight: 8,
   },
   score: {
-    color: '#fbbf24',
+    color: '#ffffff',
     fontWeight: '900',
     fontSize: 28,
   },
   inningText: {
-    color: '#9ca3af',
+    color: 'rgba(255,255,255,0.6)',
     fontWeight: '700',
     fontSize: 12,
   },
@@ -164,12 +172,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   infoCard: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: theme.surface,
+    borderRadius: radii.lg,
+    padding: 14,
     gap: 8,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
   infoTitle: {
     color: theme.primary,
@@ -188,15 +197,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   rheValue: {
-    color: theme.mutedText,
-    fontWeight: '700',
+    color: theme.accent,
+    fontWeight: '800',
   },
   inningRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#eef2f7',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.border,
     paddingTop: 8,
   },
   inningNumber: {

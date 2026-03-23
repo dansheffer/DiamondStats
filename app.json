@@ -9,19 +9,22 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#002D72"
+      "backgroundColor": "#0A2A66"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.diamondstats.app"
+      "bundleIdentifier": "com.dsheffer.diamondstats1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#002D72"
+        "backgroundColor": "#0A2A66"
       },
       "package": "com.diamondstats.app"
     },
@@ -31,6 +34,15 @@
     "scheme": "diamondstats",
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "9ea8a430-5263-4917-ab7e-cf88992e2b2f"
+      }
+    },
+    "owner": "dansheffer"
   }
 }

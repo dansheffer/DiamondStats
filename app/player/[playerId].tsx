@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import PlayerAvatar from '../src/components/PlayerAvatar';
-import { fetchPlayerCardData, type AdvancedSabermetrics, type PlayerCardData } from '../src/api/mlb';
-import { theme } from '../src/theme/colors';
-import { useResponsive } from '../src/utils/useResponsive';
+import PlayerAvatar from '../../src/components/PlayerAvatar';
+import { fetchPlayerCardData, type AdvancedSabermetrics, type PlayerCardData } from '../../src/api/mlb';
+import { theme, shadows, radii } from '../../src/theme/colors';
+import { useResponsive } from '../../src/utils/useResponsive';
 
 const HITTING_STAT_KEYS: Array<{ key: string; label: string }> = [
   { key: 'gamesPlayed', label: 'Games' },
@@ -429,20 +429,24 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: theme.background,
     padding: 14,
+    paddingBottom: 100,
   },
   cardFrame: {
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: theme.primary,
-    backgroundColor: '#f5f9ff',
+    borderRadius: radii.xl,
+    backgroundColor: theme.surface,
     padding: 6,
     gap: 6,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.lg,
   },
   cardRibbon: {
-    backgroundColor: theme.primary,
-    borderRadius: 10,
+    backgroundColor: theme.navyGlass,
+    borderRadius: radii.sm,
     paddingHorizontal: 10,
     paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: theme.navyGlassBorder,
   },
   cardRibbonText: {
     color: '#ffffff',
@@ -451,17 +455,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
+    backgroundColor: 'transparent',
+    borderRadius: radii.lg,
     padding: 16,
     gap: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
   },
   headerRow: {
     flexDirection: 'row',
@@ -486,17 +483,18 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   errorText: {
-    color: '#b91c1c',
+    color: theme.error,
     fontWeight: '700',
   },
   section: {
-    borderWidth: 1,
-    borderColor: '#dbe7f8',
-    borderRadius: 10,
+    borderRadius: radii.md,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
   sectionHeader: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.navyGlass,
   },
   sectionTitle: {
     color: '#ffffff',
@@ -509,14 +507,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
+    backgroundColor: theme.glass,
   },
   yearRow: {
     borderWidth: 1,
-    borderColor: '#e5edf9',
-    borderRadius: 8,
+    borderColor: theme.glassBorder,
+    borderRadius: radii.sm,
     padding: 8,
     gap: 5,
-    backgroundColor: '#fbfdff',
+    backgroundColor: 'rgba(10, 42, 102, 0.02)',
   },
   yearHeaderRow: {
     flexDirection: 'row',
@@ -598,11 +597,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   saberCell: {
-    backgroundColor: '#f0f5ff',
-    borderRadius: 8,
+    backgroundColor: 'rgba(10, 42, 102, 0.03)',
+    borderRadius: radii.sm,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#dbe7f8',
+    borderColor: theme.glassBorderLight,
   },
   saberValue: {
     color: theme.accent,

@@ -3,7 +3,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, METS_ORANGE } from '../src/theme/colors';
+import { theme, ORANGE } from '../../src/theme/colors';
 
 /* ── Icon config ─────────────────────────────────────────────────── */
 
@@ -12,13 +12,14 @@ type IoniconsName = keyof typeof Ionicons.glyphMap;
 interface TabMeta {
   filled: IoniconsName;
   outline: IoniconsName;
+  label: string;
 }
 
 const TAB_ICONS: Record<string, TabMeta> = {
-  index:     { filled: 'baseball',          outline: 'baseball-outline' },
-  standings: { filled: 'stats-chart',       outline: 'stats-chart-outline' },
-  myteam:    { filled: 'shield',            outline: 'shield-outline' },
-  search:    { filled: 'search',            outline: 'search-outline' },
+  index:     { filled: 'home',          outline: 'home-outline',        label: 'Home' },
+  standings: { filled: 'bar-chart',     outline: 'bar-chart-outline',   label: 'Standings' },
+  myteam:    { filled: 'shield',        outline: 'shield-outline',      label: 'My Team' },
+  search:    { filled: 'search',        outline: 'search-outline',      label: 'Search' },
 };
 
 /* ── Frosted glass tab bar background ────────────────────────────── */
@@ -33,16 +34,28 @@ function GlassTabBarBackground() {
   );
 }
 
-/* ── Active glow dot under the icon ──────────────────────────────── */
+/* ── Frosted glass header background ─────────────────────────────── */
+
+function GlassHeaderBackground() {
+  return (
+    <BlurView
+      intensity={90}
+      tint="systemChromeMaterialDark"
+      style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10, 42, 102, 0.72)' }]}
+    />
+  );
+}
+
+/* ── Tab icon with active indicator ──────────────────────────────── */
 
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const meta = TAB_ICONS[name] ?? TAB_ICONS.index;
   const iconName = focused ? meta.filled : meta.outline;
-  const color = focused ? METS_ORANGE : '#8e8e93';
+  const color = focused ? ORANGE : '#A0A8B8';
 
   return (
     <View style={styles.iconWrap}>
-      <Ionicons name={iconName} size={24} color={color} />
+      <Ionicons name={iconName} size={22} color={color} />
       {focused && <View style={styles.activeDot} />}
     </View>
   );
@@ -54,11 +67,16 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: theme.primary },
+        headerStyle: {
+          backgroundColor: Platform.OS === 'ios' ? 'transparent' : theme.primary,
+          shadowColor: 'transparent',
+          elevation: 0,
+        },
+        headerBackground: Platform.OS === 'ios' ? GlassHeaderBackground : undefined,
         headerTintColor: '#ffffff',
-        headerTitleStyle: { fontWeight: '800', letterSpacing: 0.3 },
-        tabBarActiveTintColor: METS_ORANGE,
-        tabBarInactiveTintColor: '#8e8e93',
+        headerTitleStyle: { fontWeight: '800', fontSize: 18, letterSpacing: 0.3 },
+        tabBarActiveTintColor: ORANGE,
+        tabBarInactiveTintColor: '#A0A8B8',
         tabBarStyle: {
           position: 'absolute',
           borderTopWidth: 0,
@@ -71,7 +89,7 @@ export default function TabLayout() {
         tabBarBackground: Platform.OS === 'ios' ? GlassTabBarBackground : undefined,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '700',
+          fontWeight: '600',
           letterSpacing: 0.2,
         },
       }}
@@ -115,17 +133,17 @@ const styles = StyleSheet.create({
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
   },
   activeDot: {
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: METS_ORANGE,
+    backgroundColor: ORANGE,
     marginTop: 2,
-    shadowColor: METS_ORANGE,
+    shadowColor: ORANGE,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
   },

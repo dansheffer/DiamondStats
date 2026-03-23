@@ -20,7 +20,7 @@ const PlayerAvatar: React.FC<PlayerAvatarProps> = ({ mlbId, size = 60 }) => {
   const imageSrc =
     headshotUrl && !imageError
       ? { uri: headshotUrl }
-      : require('../../../assets/player-placeholder.png');
+      : require('../../assets/player-placeholder.png');
 
   return (
     <View

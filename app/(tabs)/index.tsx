@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Linking,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,7 +12,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const BRAND_LOGO = require('../../assets/logo-home.png');
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   fetchMlbNews,
   fetchStatLeaders,
@@ -20,10 +28,10 @@ import {
   type MlbNewsItem,
   type PlayerSearchResult,
   type TodayGame,
-} from '../src/api/mlb';
-import { getCached, invalidateCache } from '../src/utils/cache';
-import { theme } from '../src/theme/colors';
-import { useResponsive } from '../src/utils/useResponsive';
+} from '../../src/api/mlb';
+import { getCached, invalidateCache } from '../../src/utils/cache';
+import { theme, shadows, radii, spacing } from '../../src/theme/colors';
+import { useResponsive } from '../../src/utils/useResponsive';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -70,10 +78,36 @@ const TTL = {
 };
 
 /* ------------------------------------------------------------------ */
+/*  Section Header                                                    */
+/* ------------------------------------------------------------------ */
+
+function SectionHeader({ icon, title, subtitle }: { icon: string; title: string; subtitle?: string }) {
+  const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+    fire: 'flame',
+    news: 'newspaper',
+    baseball: 'baseball',
+    games: 'tv',
+    bulb: 'bulb',
+    trending: 'trending-up',
+  };
+  return (
+    <View style={s.sectionHeader}>
+      <View style={s.sectionIconBadge}>
+        <Ionicons name={iconMap[icon] ?? 'baseball'} size={16} color={theme.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.sectionTitle}>{title}</Text>
+        {subtitle ? <Text style={s.sectionSubtitle}>{subtitle}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                         */
 /* ------------------------------------------------------------------ */
 
-export default function ScoresTab() {
+export default function HomeScreen() {
   const router = useRouter();
   const [games, setGames] = useState<TodayGame[]>([]);
   const [news, setNews] = useState<MlbNewsItem[]>([]);
@@ -168,13 +202,13 @@ export default function ScoresTab() {
     [],
   );
 
-  const { isTablet, gridCols, maxContentWidth, outerPadding, fontScale } = useResponsive();
+  const { isTablet, gridCols, maxContentWidth, outerPadding } = useResponsive();
 
   /* ---- Render --------------------------------------------------- */
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={s.center}>
         <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
@@ -182,156 +216,123 @@ export default function ScoresTab() {
 
   return (
     <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
+      style={s.screen}
+      contentContainerStyle={[s.content, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
       }
     >
       <View style={maxContentWidth ? { width: '100%', maxWidth: maxContentWidth } : undefined}>
+
+      {/* ── Brand Logo ─────────────────────────────────────────── */}
+      <View style={s.logoWrap}>
+        <Image source={BRAND_LOGO} style={s.brandLogo} resizeMode="contain" />
+      </View>
+
       {/* ── Player Search ──────────────────────────────────────── */}
-      <View style={styles.searchWrapper}>
-        <TextInput
-          placeholder="🔍  Search any player…"
-          placeholderTextColor={theme.mutedText}
-          value={searchQuery}
-          onChangeText={(t) => void handleSearch(t)}
-          style={[styles.searchInput, isTablet && { fontSize: 17, paddingVertical: 14 }]}
-          autoCapitalize="words"
-          returnKeyType="search"
-        />
+      <View style={s.searchWrapper}>
+        <View style={s.searchInputWrap}>
+          {Platform.OS === 'ios' && (
+            <BlurView intensity={50} tint="systemThinMaterial" style={StyleSheet.absoluteFill} />
+          )}
+          <Ionicons name="search" size={18} color={theme.mutedText} style={{ marginLeft: 14 }} />
+          <TextInput
+            placeholder="Search any player…"
+            placeholderTextColor={theme.mutedText}
+            value={searchQuery}
+            onChangeText={(t) => void handleSearch(t)}
+            style={[s.searchInput, isTablet && { fontSize: 17, paddingVertical: 14 }]}
+            autoCapitalize="words"
+            returnKeyType="search"
+          />
+        </View>
         {showDropdown && (
-          <View style={styles.dropdown}>
+          <View style={s.dropdown}>
+            {Platform.OS === 'ios' && (
+              <BlurView intensity={70} tint="systemThinMaterial" style={StyleSheet.absoluteFill} />
+            )}
             {searchLoading ? (
               <ActivityIndicator color={theme.primary} style={{ paddingVertical: 12 }} />
             ) : searchResults.length > 0 ? (
               searchResults.map((player) => (
                 <Pressable
                   key={player.id}
-                  style={({ pressed }) => [styles.dropdownRow, pressed && styles.pressed]}
+                  style={({ pressed }) => [s.dropdownRow, pressed && s.pressed]}
                   onPress={() => selectPlayer(player)}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.dropdownName}>{player.fullName}</Text>
-                    <Text style={styles.dropdownMeta}>
-                      {player.position} • {player.teamName}
+                    <Text style={s.dropdownName}>{player.fullName}</Text>
+                    <Text style={s.dropdownMeta}>
+                      {player.position} · {player.teamName}
                     </Text>
                   </View>
-                  <Text style={styles.dropdownArrow}>→</Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.mutedText} />
                 </Pressable>
               ))
             ) : (
-              <Text style={styles.dropdownEmpty}>No players found</Text>
+              <Text style={s.dropdownEmpty}>No players found</Text>
             )}
           </View>
         )}
       </View>
 
-      {/* ── Scoreboard ─────────────────────────────────────────── */}
-      <Text style={[styles.sectionTitle, isTablet && { fontSize: 23 * fontScale }]}>Today's Games</Text>
-      {games.length > 0 && games[0].gameType === 'S' && (
-        <View style={styles.springBadge}>
-          <Text style={styles.springBadgeText}>🌴 Spring Training</Text>
-        </View>
-      )}
-      {games.length > 0 ? (
-        isTablet ? (
-          /* iPad: wrap game cards in a multi-column grid */
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {games.map((game) => (
-              <Pressable
-                key={game.gamePk}
-                style={({ pressed }) => [
-                  styles.gameCard,
-                  { width: `${Math.floor(100 / gridCols) - 2}%` as unknown as number, flexGrow: 0 },
-                  pressed && styles.pressed,
-                ]}
-                onPress={() =>
-                  router.push({
-                    pathname: '/game/[gamePk]',
-                    params: { gamePk: String(game.gamePk) },
-                  })
-                }
-              >
-                <Text style={styles.gameStatus}>{game.detailedState}</Text>
-                <View style={styles.gameTeamRow}>
-                  <Text style={styles.gameTeamName}>{shortTeamName(game.awayTeam)}</Text>
-                  <Text style={styles.gameScore}>{formatScore(game.awayScore)}</Text>
-                </View>
-                <View style={styles.gameTeamRow}>
-                  <Text style={styles.gameTeamName}>{shortTeamName(game.homeTeam)}</Text>
-                  <Text style={styles.gameScore}>{formatScore(game.homeScore)}</Text>
-                </View>
-                <Text style={styles.gameMeta}>
-                  {game.inning
-                    ? `${game.inningState} ${game.inning}`
-                    : formatGameTime(game.startTime)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : (
-          /* Phone: horizontal scroll */
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.gameRow}
+      {/* ── News ───────────────────────────────────────────────── */}
+      <SectionHeader icon="news" title="Latest News" />
+      <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 10 } : { gap: 10 }}>
+        {news.map((item) => (
+          <Pressable
+            key={item.id}
+            style={({ pressed }) => [
+              s.newsCard,
+              isTablet && { width: '48%' as unknown as number },
+              pressed && s.pressed,
+            ]}
+            onPress={() => void Linking.openURL(item.linkUrl)}
           >
-            {games.map((game) => (
-              <Pressable
-                key={game.gamePk}
-                style={({ pressed }) => [styles.gameCard, pressed && styles.pressed]}
-                onPress={() =>
-                  router.push({
-                    pathname: '/game/[gamePk]',
-                    params: { gamePk: String(game.gamePk) },
-                  })
-                }
-              >
-                <Text style={styles.gameStatus}>{game.detailedState}</Text>
-                <View style={styles.gameTeamRow}>
-                  <Text style={styles.gameTeamName}>{shortTeamName(game.awayTeam)}</Text>
-                  <Text style={styles.gameScore}>{formatScore(game.awayScore)}</Text>
-                </View>
-                <View style={styles.gameTeamRow}>
-                  <Text style={styles.gameTeamName}>{shortTeamName(game.homeTeam)}</Text>
-                  <Text style={styles.gameScore}>{formatScore(game.homeScore)}</Text>
-                </View>
-                <Text style={styles.gameMeta}>
-                  {game.inning
-                    ? `${game.inningState} ${game.inning}`
-                    : formatGameTime(game.startTime)}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )
-      ) : (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>No games scheduled for today</Text>
-        </View>
-      )}
+            <View style={s.newsCardInner}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.newsTitle} numberOfLines={2}>{item.title}</Text>
+                <Text style={s.newsMeta}>{item.publishedAt}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.mutedText} style={{ marginLeft: 8 }} />
+            </View>
+          </Pressable>
+        ))}
+      </View>
 
       {/* ── Who's Hot ──────────────────────────────────────────── */}
       {leaders.length > 0 && (
         <>
-          <Text style={[styles.sectionTitle, isTablet && { fontSize: 23 * fontScale }]}>
-            Who's Hot 🔥{leadersSeason ? ` • ${leadersSeason}` : ''}
-          </Text>
-          {leadersIsFallback && (
-            <Text style={styles.fallbackNote}>
-              Showing last season's leaders — {new Date().getFullYear()} season hasn't started yet
-            </Text>
-          )}
-          <View style={[styles.leadersCard, isTablet && { flexDirection: 'row', flexWrap: 'wrap', gap: 24 }]}>
+          <SectionHeader
+            icon="fire"
+            title="Who's Hot"
+            subtitle={
+              leadersIsFallback
+                ? `Showing ${leadersSeason} leaders`
+                : leadersSeason
+                  ? `${leadersSeason} Season`
+                  : undefined
+            }
+          />
+          <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 12 } : { gap: 12 }}>
             {leaders.map((cat) => (
-              <View key={cat.category} style={[styles.leaderSection, isTablet && { width: '46%' as unknown as number }]}>
-                <Text style={styles.leaderCatLabel}>{cat.categoryLabel}</Text>
-                {cat.leaders.slice(0, 3).map((leader) => (
+              <View
+                key={cat.category}
+                style={[s.leaderCard, isTablet && { width: '48%' as unknown as number }]}
+              >
+                <View style={s.leaderCardHeader}>
+                  <Ionicons
+                    name={cat.categoryLabel.includes('ERA') ? 'baseball' : cat.categoryLabel.includes('HR') ? 'flash' : 'trending-up'}
+                    size={14}
+                    color={theme.accent}
+                  />
+                  <Text style={s.leaderCatLabel}>{cat.categoryLabel}</Text>
+                </View>
+                {cat.leaders.slice(0, 3).map((leader, idx) => (
                   <Pressable
                     key={`${cat.category}-${leader.rank}`}
-                    style={({ pressed }) => [styles.leaderRow, pressed && styles.pressed]}
+                    style={({ pressed }) => [s.leaderRow, pressed && s.pressed]}
                     onPress={() => {
                       if (leader.playerId > 0) {
                         router.push({
@@ -344,14 +345,14 @@ export default function ScoresTab() {
                       }
                     }}
                   >
-                    <Text style={styles.leaderRank}>{leader.rank}</Text>
-                    <View style={styles.leaderInfo}>
-                      <Text style={styles.leaderName} numberOfLines={1}>
-                        {leader.playerName}
-                      </Text>
-                      <Text style={styles.leaderTeam}>{leader.teamAbbrev}</Text>
+                    <View style={[s.rankBadge, idx === 0 && s.rankBadgeFirst]}>
+                      <Text style={[s.rankText, idx === 0 && s.rankTextFirst]}>{leader.rank}</Text>
                     </View>
-                    <Text style={styles.leaderValue}>{leader.value}</Text>
+                    <View style={s.leaderInfo}>
+                      <Text style={s.leaderName} numberOfLines={1}>{leader.playerName}</Text>
+                      <Text style={s.leaderTeam}>{leader.teamAbbrev}</Text>
+                    </View>
+                    <Text style={[s.leaderValue, idx === 0 && s.leaderValueFirst]}>{leader.value}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -361,29 +362,97 @@ export default function ScoresTab() {
       )}
 
       {/* ── Trivia ─────────────────────────────────────────────── */}
-      <View style={styles.triviaCard}>
-        <Text style={styles.triviaTitle}>⚾ Baseball Fact of the Day</Text>
-        <Text style={styles.triviaText}>{dailyTrivia}</Text>
+      <View style={s.triviaOuter}>
+        <LinearGradient
+          colors={['#0A2A66', '#133A8A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.triviaGradient}
+        >
+          <View style={s.triviaHeader}>
+            <Ionicons name="baseball" size={18} color="rgba(255,255,255,0.7)" />
+            <Text style={s.triviaTitle}>Fact of the Day</Text>
+          </View>
+          <Text style={s.triviaText}>{dailyTrivia}</Text>
+        </LinearGradient>
       </View>
 
-      {/* ── News ───────────────────────────────────────────────── */}
-      <Text style={[styles.sectionTitle, isTablet && { fontSize: 23 * fontScale }]}>Latest News</Text>
-      <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 10 } : undefined}>
-        {news.map((item) => (
-          <Pressable
-            key={item.id}
-            style={({ pressed }) => [
-              styles.newsCard,
-              isTablet && { width: '48%' as unknown as number },
-              pressed && styles.pressed,
-            ]}
-            onPress={() => void Linking.openURL(item.linkUrl)}
-          >
-            <Text style={styles.newsTitle}>{item.title}</Text>
-            <Text style={styles.newsMeta}>{item.publishedAt}</Text>
-          </Pressable>
-        ))}
-      </View>
+      {/* ── Scoreboard ─────────────────────────────────────────── */}
+      <SectionHeader icon="games" title="Today's Games" />
+      {games.length > 0 && games[0].gameType === 'S' && (
+        <View style={s.springBadge}>
+          <Ionicons name="leaf" size={13} color="#16A34A" />
+          <Text style={s.springBadgeText}>Spring Training</Text>
+        </View>
+      )}
+      {games.length > 0 ? (
+        isTablet ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {games.map((game) => (
+              <Pressable
+                key={game.gamePk}
+                style={({ pressed }) => [
+                  s.gameCard,
+                  { width: `${Math.floor(100 / gridCols) - 2}%` as unknown as number, flexGrow: 0 },
+                  pressed && s.pressed,
+                ]}
+                onPress={() =>
+                  router.push({ pathname: '/game/[gamePk]', params: { gamePk: String(game.gamePk) } })
+                }
+              >
+                <View style={s.gameStatusRow}>
+                  <View style={[s.gameStatusDot, game.detailedState === 'In Progress' && s.gameStatusLive]} />
+                  <Text style={s.gameStatus}>{game.detailedState}</Text>
+                </View>
+                <View style={s.gameTeamRow}>
+                  <Text style={s.gameTeamName}>{shortTeamName(game.awayTeam)}</Text>
+                  <Text style={s.gameScore}>{formatScore(game.awayScore)}</Text>
+                </View>
+                <View style={s.gameTeamRow}>
+                  <Text style={s.gameTeamName}>{shortTeamName(game.homeTeam)}</Text>
+                  <Text style={s.gameScore}>{formatScore(game.homeScore)}</Text>
+                </View>
+                <Text style={s.gameMeta}>
+                  {game.inning ? `${game.inningState} ${game.inning}` : formatGameTime(game.startTime)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.gameRow}>
+            {games.map((game) => (
+              <Pressable
+                key={game.gamePk}
+                style={({ pressed }) => [s.gameCard, pressed && s.pressed]}
+                onPress={() =>
+                  router.push({ pathname: '/game/[gamePk]', params: { gamePk: String(game.gamePk) } })
+                }
+              >
+                <View style={s.gameStatusRow}>
+                  <View style={[s.gameStatusDot, game.detailedState === 'In Progress' && s.gameStatusLive]} />
+                  <Text style={s.gameStatus}>{game.detailedState}</Text>
+                </View>
+                <View style={s.gameTeamRow}>
+                  <Text style={s.gameTeamName}>{shortTeamName(game.awayTeam)}</Text>
+                  <Text style={s.gameScore}>{formatScore(game.awayScore)}</Text>
+                </View>
+                <View style={s.gameTeamRow}>
+                  <Text style={s.gameTeamName}>{shortTeamName(game.homeTeam)}</Text>
+                  <Text style={s.gameScore}>{formatScore(game.homeScore)}</Text>
+                </View>
+                <Text style={s.gameMeta}>
+                  {game.inning ? `${game.inningState} ${game.inning}` : formatGameTime(game.startTime)}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )
+      ) : (
+        <View style={s.emptyCard}>
+          <Ionicons name="calendar-outline" size={28} color={theme.mutedText} />
+          <Text style={s.emptyText}>No games scheduled for today</Text>
+        </View>
+      )}
       </View>{/* end maxContentWidth wrapper */}
     </ScrollView>
   );
@@ -393,132 +462,169 @@ export default function ScoresTab() {
 /*  Styles                                                            */
 /* ------------------------------------------------------------------ */
 
-const styles = StyleSheet.create({
+const CARD_RADIUS = radii.lg;
+
+const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.background },
-  content: { padding: 16, paddingBottom: 40, gap: 12 },
+  content: { padding: spacing.md, paddingBottom: 100, gap: spacing.md },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  sectionTitle: { fontSize: 20, fontWeight: '800', color: theme.text, marginTop: 4 },
-  fallbackNote: { color: theme.mutedText, fontSize: 12, fontWeight: '600', fontStyle: 'italic', marginTop: -4 },
+  /* Brand logo */
+  logoWrap: { alignItems: 'center', marginBottom: 4 },
+  brandLogo: { width: 220, height: 80 },
+
+  /* Section headers */
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: spacing.sm },
+  sectionIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 106, 19, 0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: { fontSize: 20, fontWeight: '800', color: theme.text, letterSpacing: -0.3 },
+  sectionSubtitle: { fontSize: 12, fontWeight: '600', color: theme.mutedText, marginTop: 1 },
 
   /* Scoreboard */
   gameRow: { gap: 10, paddingVertical: 4, paddingRight: 8 },
   gameCard: {
-    width: 170,
-    backgroundColor: '#0b1020',
-    borderRadius: 12,
+    width: 175,
+    backgroundColor: theme.surface,
+    borderRadius: CARD_RADIUS,
+    padding: 14,
+    gap: 8,
     borderWidth: 1,
-    borderColor: '#1f2937',
-    padding: 12,
-    gap: 6,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
+  gameStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  gameStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.mutedText,
+  },
+  gameStatusLive: { backgroundColor: '#16A34A' },
   gameStatus: {
-    color: '#67e8f9',
+    color: theme.textSecondary,
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.4,
+    fontWeight: '700',
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   gameTeamRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  gameTeamName: { color: '#e5e7eb', fontWeight: '700', fontSize: 14 },
-  gameScore: { color: '#fbbf24', fontWeight: '900', fontSize: 20 },
-  gameMeta: { color: '#9ca3af', fontWeight: '700', fontSize: 12 },
+  gameTeamName: { color: theme.text, fontWeight: '700', fontSize: 15 },
+  gameScore: { color: theme.primary, fontWeight: '900', fontSize: 22 },
+  gameMeta: { color: theme.mutedText, fontWeight: '600', fontSize: 12, marginTop: -2 },
 
-  /* Who's Hot */
-  leadersCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+  /* Who's Hot — leader cards */
+  leaderCard: {
+    backgroundColor: theme.surface,
+    borderRadius: CARD_RADIUS,
+    padding: 16,
+    gap: 6,
     borderWidth: 1,
-    borderColor: theme.border,
-    padding: 14,
-    gap: 18,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
-  leaderSection: { gap: 4 },
+  leaderCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   leaderCatLabel: {
     fontSize: 13,
     fontWeight: '800',
     color: theme.primary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
-  leaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
-  leaderRank: {
-    width: 22,
-    color: theme.mutedText,
-    fontSize: 14,
-    fontWeight: '800',
-    textAlign: 'center',
+  leaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.border,
   },
+  rankBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: 'rgba(10, 42, 102, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankBadgeFirst: { backgroundColor: theme.accent },
+  rankText: { color: theme.mutedText, fontSize: 12, fontWeight: '800' },
+  rankTextFirst: { color: '#fff' },
   leaderInfo: { flex: 1 },
   leaderName: { color: theme.text, fontWeight: '700', fontSize: 14 },
   leaderTeam: { color: theme.mutedText, fontSize: 12, fontWeight: '600' },
   leaderValue: {
-    color: theme.accent,
-    fontSize: 16,
+    color: theme.primary,
+    fontSize: 17,
     fontWeight: '900',
     minWidth: 50,
     textAlign: 'right',
   },
+  leaderValueFirst: { color: theme.accent },
 
   /* Trivia */
-  triviaCard: {
-    backgroundColor: '#fff7ed',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#fed7aa',
-    padding: 14,
-  },
-  triviaTitle: { color: '#9a3412', fontWeight: '800', fontSize: 14, marginBottom: 4 },
-  triviaText: { color: '#7c2d12', fontWeight: '600', lineHeight: 20 },
+  triviaOuter: { borderRadius: CARD_RADIUS, overflow: 'hidden', ...shadows.lg },
+  triviaGradient: { padding: 18, borderRadius: CARD_RADIUS },
+  triviaHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  triviaTitle: { color: 'rgba(255,255,255,0.85)', fontWeight: '800', fontSize: 15 },
+  triviaText: { color: '#ffffff', fontWeight: '600', fontSize: 14, lineHeight: 22 },
 
   /* News */
   newsCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    borderRadius: CARD_RADIUS,
     padding: 14,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
-  newsTitle: { color: theme.text, fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  newsMeta: { color: theme.mutedText, fontSize: 12 },
+  newsCardInner: { flexDirection: 'row', alignItems: 'center' },
+  newsTitle: { color: theme.text, fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  newsMeta: { color: theme.mutedText, fontSize: 12, marginTop: 4 },
 
   /* Player search */
   searchWrapper: { zIndex: 10 },
-  searchInput: {
-    backgroundColor: '#ffffff',
-    borderColor: theme.border,
+  searchInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.glass,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderColor: theme.glassBorder,
+    overflow: 'hidden',
+    ...shadows.glass,
+  },
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: 10,
     paddingVertical: 12,
     fontSize: 15,
     color: theme.text,
   },
   dropdown: {
-    backgroundColor: '#ffffff',
-    borderColor: theme.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    marginTop: 4,
+    backgroundColor: theme.surfaceElevated,
+    borderRadius: radii.md,
+    marginTop: 6,
     overflow: 'hidden',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.lg,
   },
   dropdownRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 12,
     borderBottomColor: theme.border,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   dropdownName: { color: theme.text, fontWeight: '700', fontSize: 15 },
   dropdownMeta: { color: theme.mutedText, fontSize: 12, marginTop: 1 },
-  dropdownArrow: { color: theme.primary, fontWeight: '800', fontSize: 16 },
   dropdownEmpty: {
     color: theme.mutedText,
     fontWeight: '600',
@@ -528,29 +634,32 @@ const styles = StyleSheet.create({
 
   /* Shared */
   emptyCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
-    padding: 24,
+    backgroundColor: theme.surface,
+    borderRadius: CARD_RADIUS,
+    padding: 28,
     alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
   emptyText: { color: theme.mutedText, fontWeight: '600' },
-  pressed: { opacity: 0.85 },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 
   /* Spring Training badge */
   springBadge: {
-    backgroundColor: '#ecfdf5',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#6ee7b7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(240, 253, 244, 0.75)',
+    borderRadius: radii.sm,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     alignSelf: 'flex-start',
   },
   springBadgeText: {
-    color: '#047857',
-    fontWeight: '800',
+    color: '#16A34A',
+    fontWeight: '700',
     fontSize: 12,
   },
 });

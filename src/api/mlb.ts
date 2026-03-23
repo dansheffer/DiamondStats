@@ -668,17 +668,31 @@ export interface StatLeadersResult {
 }
 
 export async function fetchStatLeaders(): Promise<StatLeadersResult> {
-  const categories = 'homeRuns,battingAverage,earnedRunAverage';
+  // Hitting and pitching need separate calls with statGroup + playerPool filters
+  // so batting avg shows real hitters (not pitchers-batting-against).
+  const hittingCats = 'homeRuns,battingAverage';
+  const pitchingCats = 'earnedRunAverage';
+
+  async function fetchForSeason(season: string) {
+    const [hitData, pitchData] = await Promise.all([
+      fetchJson(
+        `${MLB_STATS_API_BASE}/stats/leaders?leaderCategories=${hittingCats}&season=${season}&sportId=1&limit=5&statGroup=hitting&playerPool=Qualified`,
+      ),
+      fetchJson(
+        `${MLB_STATS_API_BASE}/stats/leaders?leaderCategories=${pitchingCats}&season=${season}&sportId=1&limit=5&statGroup=pitching&playerPool=Qualified`,
+      ),
+    ]);
+    const hitLeaders =
+      (hitData.leagueLeaders as Array<Record<string, unknown>> | undefined) ?? [];
+    const pitchLeaders =
+      (pitchData.leagueLeaders as Array<Record<string, unknown>> | undefined) ?? [];
+    return [...hitLeaders, ...pitchLeaders];
+  }
 
   // Try current season first, fall back to previous season if empty.
   let season = CURRENT_SEASON;
   let isFallback = false;
-  let data = await fetchJson(
-    `${MLB_STATS_API_BASE}/stats/leaders?leaderCategories=${categories}&season=${season}&sportId=1&limit=5`,
-  );
-
-  let leagueLeaders =
-    (data.leagueLeaders as Array<Record<string, unknown>> | undefined) ?? [];
+  let leagueLeaders = await fetchForSeason(season);
 
   const hasData = leagueLeaders.some((cat) => {
     const leaders = (cat.leaders as Array<unknown> | undefined) ?? [];
@@ -688,11 +702,7 @@ export async function fetchStatLeaders(): Promise<StatLeadersResult> {
   if (!hasData) {
     season = String(Number(CURRENT_SEASON) - 1);
     isFallback = true;
-    data = await fetchJson(
-      `${MLB_STATS_API_BASE}/stats/leaders?leaderCategories=${categories}&season=${season}&sportId=1&limit=5`,
-    );
-    leagueLeaders =
-      (data.leagueLeaders as Array<Record<string, unknown>> | undefined) ?? [];
+    leagueLeaders = await fetchForSeason(season);
   }
 
   // Deduplicate — API sometimes returns separate AL/NL entries per category.

@@ -8,13 +8,65 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+/** Map MLB API abbreviations to ESPN CDN slugs (only overrides needed) */
+const ESPN_ABBREV: Record<string, string> = { AZ: 'ari', CWS: 'chw', WSH: 'wsh' };
+function espnLogoUrl(abbrev: string): string {
+  const slug = ESPN_ABBREV[abbrev.toUpperCase()] ?? abbrev.toLowerCase();
+  return `https://a.espncdn.com/i/teamlogos/mlb/500/${slug}.png`;
+}
+
+/** Tiny component that shows team logo with abbreviation fallback */
+const TeamLogo: React.FC<{ teamId: number; abbrev: string; size: number }> = ({
+  abbrev,
+  size,
+}) => {
+  const [failed, setFailed] = useState(false);
+  const radius = size / 2;
+
+  if (failed || !abbrev) {
+    return (
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radius,
+          backgroundColor: theme.background,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 8,
+        }}
+      >
+        <Text style={{ color: theme.mutedText, fontSize: size * 0.38, fontWeight: '800' }}>
+          {(abbrev ?? '').slice(0, 3)}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: espnLogoUrl(abbrev) }}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        marginRight: 8,
+        backgroundColor: theme.background,
+      }}
+      resizeMode="contain"
+      onError={() => setFailed(true)}
+    />
+  );
+};
 import {
   fetchStandings,
   type StandingRow,
-} from '../src/api/mlb';
-import { getCached, invalidateCache } from '../src/utils/cache';
-import { theme } from '../src/theme/colors';
-import { useResponsive } from '../src/utils/useResponsive';
+} from '../../src/api/mlb';
+import { getCached, invalidateCache } from '../../src/utils/cache';
+import { theme, shadows, radii } from '../../src/theme/colors';
+import { useResponsive } from '../../src/utils/useResponsive';
 
 const STANDINGS_TTL = 15 * 60 * 1000; // 15 min
 
@@ -122,9 +174,12 @@ export default function StandingsTab() {
 
         {isPreSeason && (
           <View style={styles.preSeasonBanner}>
-            <Text style={styles.preSeasonText}>
-              🌴 Spring Training — Regular season standings will update once the season begins
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Ionicons name="leaf" size={14} color="#16A34A" />
+              <Text style={styles.preSeasonText}>
+                Spring Training — Regular season standings will update once the season begins
+              </Text>
+            </View>
           </View>
         )}
 
@@ -157,12 +212,7 @@ export default function StandingsTab() {
                       .map((row) => (
                         <View key={row.id} style={styles.teamRow}>
                           <View style={[styles.teamCol, isTablet && { width: 160 }]}>
-                            <Image
-                              source={{
-                                uri: `https://midfield.mlbstatic.com/v1/team/${row.teamId}/spots/72`,
-                              }}
-                              style={[styles.teamLogo, isTablet && { width: 36, height: 36, borderRadius: 18 }]}
-                            />
+                            <TeamLogo teamId={row.teamId} abbrev={row.teamAbbrev} size={isTablet ? 36 : 30} />
                             <Text style={[styles.teamAbbrev, isTablet && { fontSize: 16 }]}>{row.teamAbbrev}</Text>
                           </View>
                           <Text style={[styles.stat, styles.colW, isTablet && { width: 48, fontSize: 15 }]}>{row.wins}</Text>
@@ -200,12 +250,7 @@ export default function StandingsTab() {
                       .map((row) => (
                         <View key={row.id} style={styles.teamRow}>
                           <View style={styles.teamCol}>
-                            <Image
-                              source={{
-                                uri: `https://midfield.mlbstatic.com/v1/team/${row.teamId}/spots/72`,
-                              }}
-                              style={styles.teamLogo}
-                            />
+                            <TeamLogo teamId={row.teamId} abbrev={row.teamAbbrev} size={30} />
                             <Text style={styles.teamAbbrev}>{row.teamAbbrev}</Text>
                           </View>
                           <Text style={[styles.stat, styles.colW]}>{row.wins}</Text>
@@ -235,12 +280,19 @@ export default function StandingsTab() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.background },
-  content: { padding: 12, paddingBottom: 32 },
+  content: { padding: 12, paddingBottom: 100 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  surface: { backgroundColor: '#0c1222', borderRadius: 12, overflow: 'hidden' },
+  surface: {
+    backgroundColor: theme.surface,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
+  },
 
-  topTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#1e2636' },
+  topTabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.border },
   topTab: {
     flex: 1,
     paddingVertical: 12,
@@ -248,12 +300,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
   },
-  topTabActive: { borderBottomColor: '#3b82f6' },
-  topTabText: { color: '#6b7280', fontSize: 15, fontWeight: '600' },
-  topTabTextActive: { color: '#ffffff' },
+  topTabActive: { borderBottomColor: theme.accent },
+  topTabText: { color: theme.mutedText, fontSize: 15, fontWeight: '600' },
+  topTabTextActive: { color: theme.text },
 
   leagueHeaderRow: { paddingHorizontal: 14, paddingTop: 20, paddingBottom: 10 },
-  leagueHeaderText: { color: '#ffffff', fontSize: 21, fontWeight: '800' },
+  leagueHeaderText: { color: theme.primary, fontSize: 21, fontWeight: '800' },
 
   table: { minWidth: 420 },
   divHeaderRow: {
@@ -261,16 +313,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
+    backgroundColor: 'rgba(10, 42, 102, 0.03)',
   },
   teamCol: { width: 115, flexDirection: 'row', alignItems: 'center' },
   divLabel: {
-    color: '#6b7280',
+    color: theme.mutedText,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  colLabel: { color: '#6b7280', fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  colLabel: { color: theme.mutedText, fontSize: 11, fontWeight: '700', textAlign: 'center' },
   colW: { width: 36 },
   colL: { width: 36 },
   colPct: { width: 46 },
@@ -285,28 +338,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#1a2234',
+    borderTopColor: theme.border,
   },
-  teamLogo: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 8,
-    backgroundColor: '#1a2234',
-  },
-  teamAbbrev: { color: '#e5e7eb', fontSize: 14, fontWeight: '700' },
-  stat: { color: '#d1d5db', fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  statBold: { color: '#ffffff', fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  teamAbbrev: { color: theme.text, fontSize: 14, fontWeight: '700' },
+  stat: { color: theme.textSecondary, fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  statBold: { color: theme.primary, fontSize: 13, fontWeight: '800', textAlign: 'center' },
 
   preSeasonBanner: {
-    backgroundColor: '#0d1a2e',
+    backgroundColor: 'rgba(240, 253, 244, 0.75)',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e2636',
+    borderBottomColor: '#BBF7D0',
   },
   preSeasonText: {
-    color: '#6ee7b7',
+    color: '#16A34A',
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',

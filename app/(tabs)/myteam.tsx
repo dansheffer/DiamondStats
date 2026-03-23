@@ -20,10 +20,24 @@ import {
   type TeamOption,
   type TeamRosterPlayer,
   type TeamScheduleGame,
-} from '../src/api/mlb';
-import { getCached, invalidateCache } from '../src/utils/cache';
-import { theme } from '../src/theme/colors';
-import { useResponsive } from '../src/utils/useResponsive';
+} from '../../src/api/mlb';
+import { getCached, invalidateCache } from '../../src/utils/cache';
+import { theme, shadows, radii } from '../../src/theme/colors';
+import { useResponsive } from '../../src/utils/useResponsive';
+
+function espnLogoUrlById(teamId: number, teamName: string): string {
+  // Extract abbreviation from common team names as fallback
+  const TEAM_ID_TO_ABBREV: Record<number, string> = {
+    108: 'laa', 109: 'ari', 110: 'bal', 111: 'bos', 112: 'chc',
+    113: 'cin', 114: 'cle', 115: 'col', 116: 'det', 117: 'hou',
+    118: 'kc', 119: 'lad', 120: 'wsh', 121: 'nym', 133: 'oak',
+    134: 'pit', 135: 'sd', 136: 'sea', 137: 'sf', 138: 'stl',
+    139: 'tb', 140: 'tex', 141: 'tor', 142: 'min', 143: 'phi',
+    144: 'atl', 145: 'chw', 146: 'mia', 147: 'nyy', 158: 'mil',
+  };
+  const slug = TEAM_ID_TO_ABBREV[teamId] ?? teamName.split(' ').pop()?.toLowerCase() ?? 'mlb';
+  return `https://a.espncdn.com/i/teamlogos/mlb/500/${slug}.png`;
+}
 
 const FAV_TEAM_KEY = 'diamondstats:favoriteTeam';
 const TTL = {
@@ -242,7 +256,7 @@ export default function MyTeamTab() {
               onPress={() => void selectTeam(team)}
             >
               <Image
-                source={{ uri: `https://midfield.mlbstatic.com/v1/team/${team.id}/spots/72` }}
+                source={{ uri: espnLogoUrlById(team.id, team.name) }}
                 style={[styles.teamCellLogo, isTablet && { width: 64, height: 64, borderRadius: 32 }]}
               />
               <Text style={[styles.teamCellName, isTablet && { fontSize: 14 }]} numberOfLines={1}>
@@ -269,7 +283,7 @@ export default function MyTeamTab() {
       {/* ── Team header ────────────────────────────────────────── */}
       <View style={styles.teamHeader}>
         <Image
-          source={{ uri: `https://midfield.mlbstatic.com/v1/team/${favTeam!.id}/spots/72` }}
+          source={{ uri: espnLogoUrlById(favTeam!.id, favTeam!.name) }}
           style={[styles.teamHeaderLogo, isTablet && { width: 80, height: 80, borderRadius: 40 }]}
         />
         <View style={styles.teamHeaderInfo}>
@@ -416,52 +430,57 @@ export default function MyTeamTab() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.background },
-  content: { padding: 16, paddingBottom: 40, gap: 12 },
+  content: { padding: 16, paddingBottom: 100, gap: 12 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   /* Picker */
-  pickerContent: { padding: 20, paddingBottom: 40 },
-  pickerTitle: { fontSize: 26, fontWeight: '800', color: theme.text, marginBottom: 4 },
+  pickerContent: { padding: 20, paddingBottom: 100 },
+  pickerTitle: { fontSize: 26, fontWeight: '800', color: theme.text, marginBottom: 4, letterSpacing: -0.3 },
   pickerSub: { fontSize: 14, color: theme.mutedText, marginBottom: 20 },
   teamGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   teamCell: {
     width: '30%',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    borderRadius: radii.lg,
     paddingVertical: 14,
     paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
-  teamCellLogo: { width: 52, height: 52, borderRadius: 26, marginBottom: 6, backgroundColor: '#f3f4f6' },
+  teamCellLogo: { width: 52, height: 52, borderRadius: 26, marginBottom: 6, backgroundColor: 'rgba(10, 42, 102, 0.04)' },
   teamCellName: { fontSize: 12, fontWeight: '700', color: theme.text, textAlign: 'center' },
 
-  /* Team header */
+  /* Team header — navy glass */
   teamHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0c1222',
-    borderRadius: 14,
+    backgroundColor: theme.navyGlass,
+    borderRadius: radii.lg,
     padding: 16,
     gap: 14,
+    borderWidth: 1,
+    borderColor: theme.navyGlassBorder,
+    ...shadows.lg,
   },
-  teamHeaderLogo: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#1a2234' },
+  teamHeaderLogo: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.15)' },
   teamHeaderInfo: { flex: 1 },
   teamHeaderName: { color: '#ffffff', fontSize: 22, fontWeight: '800' },
-  teamHeaderRecord: { color: '#9ca3af', fontSize: 14, fontWeight: '600', marginTop: 2 },
+  teamHeaderRecord: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600', marginTop: 2 },
 
   /* Section titles */
   sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.text, marginTop: 4 },
 
   /* Game cards */
   gameCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    borderRadius: radii.lg,
     padding: 14,
     gap: 4,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
   gameDate: { color: theme.mutedText, fontSize: 12, fontWeight: '700' },
   gameOpp: { color: theme.text, fontSize: 17, fontWeight: '800' },
@@ -472,37 +491,39 @@ const styles = StyleSheet.create({
   rosterGroup: { gap: 6, marginBottom: 4 },
   rosterGroupTitle: { color: theme.primary, fontWeight: '800', fontSize: 15 },
   rosterRow: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    borderRadius: radii.md,
     padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
   rosterName: { color: theme.text, fontWeight: '700', flex: 1 },
   rosterMeta: { color: theme.mutedText, fontWeight: '600', marginLeft: 8 },
 
   /* Change team */
   changeBtn: {
-    backgroundColor: '#fee2e2',
-    borderRadius: 10,
+    backgroundColor: 'rgba(220, 38, 38, 0.08)',
+    borderRadius: radii.md,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 8,
   },
-  changeBtnText: { color: '#b91c1c', fontWeight: '800', fontSize: 14 },
+  changeBtnText: { color: theme.error, fontWeight: '800', fontSize: 14 },
 
   /* Shared */
   emptyCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    borderRadius: radii.lg,
     padding: 20,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
   emptyText: { color: theme.mutedText, fontWeight: '600' },
-  pressed: { opacity: 0.85 },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 });

@@ -9,9 +9,10 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { searchPlayersByName, type PlayerSearchResult } from '../src/api/mlb';
-import { theme } from '../src/theme/colors';
-import { useResponsive } from '../src/utils/useResponsive';
+import { Ionicons } from '@expo/vector-icons';
+import { searchPlayersByName, type PlayerSearchResult } from '../../src/api/mlb';
+import { theme, shadows, radii } from '../../src/theme/colors';
+import { useResponsive } from '../../src/utils/useResponsive';
 
 export default function SearchTab() {
   const router = useRouter();
@@ -82,7 +83,7 @@ export default function SearchTab() {
       {loading && <ActivityIndicator color={theme.primary} style={styles.loader} />}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 10 } : undefined}>
+      <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 10 } : { gap: 10 }}>
         {results.map((player) => (
           <Pressable
             key={player.id}
@@ -122,7 +123,10 @@ export default function SearchTab() {
 
       {!hasSearched && (
         <View style={styles.hintCard}>
-          <Text style={styles.hintTitle}>💡 Tips</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <Ionicons name="bulb" size={16} color={theme.primary} />
+            <Text style={styles.hintTitle}>Tips</Text>
+          </View>
           <Text style={[styles.hintText, isTablet && { fontSize: 15 }]}>
             • Try full names: "Shohei Ohtani"{'\n'}
             • Or last names: "Judge"{'\n'}
@@ -137,70 +141,73 @@ export default function SearchTab() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.background },
-  content: { padding: 16, paddingBottom: 40, gap: 12 },
+  content: { padding: 16, paddingBottom: 100, gap: 12 },
 
-  heading: { fontSize: 26, fontWeight: '800', color: theme.text },
+  heading: { fontSize: 26, fontWeight: '800', color: theme.text, letterSpacing: -0.3 },
   sub: { fontSize: 14, color: theme.mutedText, marginBottom: 4 },
 
   searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   input: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderColor: theme.border,
-    borderWidth: 1,
-    borderRadius: 12,
+    backgroundColor: theme.glass,
+    borderRadius: radii.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: theme.text,
     fontSize: 15,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
   searchBtn: {
     backgroundColor: theme.accent,
-    borderRadius: 12,
+    borderRadius: radii.md,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  searchBtnText: { color: '#111827', fontWeight: '800', fontSize: 15 },
+  searchBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 15 },
 
   loader: { marginVertical: 8 },
-  errorText: { color: '#b91c1c', fontWeight: '700' },
+  errorText: { color: theme.error, fontWeight: '700' },
 
   resultRow: {
-    backgroundColor: '#ffffff',
-    borderColor: theme.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    backgroundColor: theme.surface,
+    borderRadius: radii.lg,
+    padding: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
   resultInfo: { flex: 1 },
   resultName: { color: theme.text, fontWeight: '800', fontSize: 16 },
   resultMeta: { color: theme.mutedText, fontSize: 13, marginTop: 2 },
-  openLabel: { color: theme.primary, fontWeight: '800', fontSize: 14 },
+  openLabel: { color: theme.accent, fontWeight: '800', fontSize: 14 },
 
   emptyCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    borderRadius: radii.lg,
     padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
   emptyText: { color: theme.mutedText, fontWeight: '600' },
 
   hintCard: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    padding: 14,
+    backgroundColor: theme.surface,
+    borderRadius: radii.lg,
+    padding: 16,
     marginTop: 4,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+    ...shadows.glass,
   },
-  hintTitle: { color: theme.primary, fontWeight: '800', fontSize: 14, marginBottom: 6 },
-  hintText: { color: '#1e40af', fontSize: 13, fontWeight: '600', lineHeight: 20 },
+  hintTitle: { color: theme.primary, fontWeight: '800', fontSize: 14 },
+  hintText: { color: theme.textSecondary, fontSize: 13, fontWeight: '600', lineHeight: 20 },
 
-  pressed: { opacity: 0.85 },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 });
