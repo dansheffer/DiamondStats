@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -19,6 +19,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import AdBanner from '../../src/components/AdBanner';
+import * as StoreReview from 'expo-store-review';
 import {
   fetchMlbNews,
   fetchStatLeaders,
@@ -32,6 +34,7 @@ import {
 import { getCached, invalidateCache } from '../../src/utils/cache';
 import { theme, shadows, radii, spacing } from '../../src/theme/colors';
 import { useResponsive } from '../../src/utils/useResponsive';
+import { trackSession, markReviewPrompted } from '../../src/utils/store';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -48,6 +51,51 @@ const TRIVIA_FACTS = [
   'Mariano Rivera has the most career saves in MLB history: 652.',
   'A perfect game means no opposing batter reaches base at all.',
   "The World Series winner receives the Commissioner's Trophy each season.",
+  'Barry Bonds holds the single-season home run record with 73 (2001).',
+  'Cy Young won 511 games — the most ever by a pitcher in MLB history.',
+  'The designated hitter rule was introduced by the AL in 1973.',
+  'Pete Rose has the most career hits with 4,256.',
+  'Hank Aaron held the career HR record (755) for 33 years until Bonds broke it.',
+  'The first World Series was played in 1903 between Boston and Pittsburgh.',
+  'A balk is called when a pitcher makes an illegal motion on the mound.',
+  'The infield fly rule prevents infielders from intentionally dropping pop-ups.',
+  'Ted Williams was the last player to bat .400, hitting .406 in 1941.',
+  'Sandy Koufax threw four no-hitters, including a perfect game in 1965.',
+  'The longest MLB game lasted 26 innings (Brooklyn vs. Boston, 1920).',
+  'Jackie Robinson broke the color barrier on April 15, 1947, with the Dodgers.',
+  'Every team retires #42 in honor of Jackie Robinson.',
+  'The "Green Monster" at Fenway Park is 37 feet tall.',
+  'Wrigley Field\'s ivy-covered outfield walls were planted in 1937.',
+  'A "cycle" is when a batter hits a single, double, triple, and HR in one game.',
+  'The fastest recorded pitch in MLB history is 105.8 mph by Aroldis Chapman.',
+  'Greg Maddux won four consecutive Cy Young Awards (1992–1995).',
+  'MLB baseballs are hand-stitched with exactly 108 red stitches.',
+  'The first night game was played at Crosley Field in Cincinnati (1935).',
+  'Babe Ruth started his career as a pitcher for the Boston Red Sox.',
+  'The "Curse of the Bambino" lasted 86 years (1918–2004) for Boston.',
+  'Derek Jeter collected 3,465 hits, all with the New York Yankees.',
+  'A "walk-off" home run ends the game immediately for the home team.',
+  'The "suicide squeeze" is a bunt play with a runner sprinting from third.',
+  'Bob Gibson\'s 1.12 ERA in 1968 is the modern single-season record.',
+  'FIP (Fielding Independent Pitching) isolates pitching from defense.',
+  'wOBA (Weighted On-Base Average) values each method of reaching base.',
+  'WAR (Wins Above Replacement) measures total value over a replacement player.',
+  'BABIP (.300 is average) helps identify lucky or unlucky streaks.',
+  'OPS+ adjusts OPS for park effects and league averages (100 = league avg).',
+  'The shift was restricted starting in the 2023 MLB season.',
+  'A pitch clock was introduced in 2023, reducing average game time by 30 minutes.',
+  'The automatic strike zone (robo-umps) has been tested in minor leagues.',
+  'Shohei Ohtani became the first player since Babe Ruth to star as both pitcher and hitter.',
+  'The triple crown (BA, HR, RBI leader) was last won by Miguel Cabrera in 2012.',
+  'Willie Mays is widely considered the greatest all-around player in MLB history.',
+  'The "Moneyball" A\'s pioneered analytics-driven roster construction in 2002.',
+  'Tom Glavine and Greg Maddux each threw fewer than 80 pitches in multiple complete games.',
+  'Craig Kimbrel\'s career saves rate per 9 innings is among the best ever.',
+  'The largest comeback in MLB history was 12 runs (multiple occurrences).',
+  'Ichiro Suzuki set the single-season hits record with 262 in 2004.',
+  'Randy Johnson threw a perfect game at age 40 in 2004.',
+  'The "hot corner" refers to third base due to hard-hit balls down the line.',
+  'A "can of corn" is an easy fly ball — named after grocers catching canned goods.',
 ];
 
 function getDayOfYear(date: Date): number {
@@ -68,7 +116,9 @@ function formatGameTime(startTime: string): string {
   if (!startTime) return 'TBD';
   const d = new Date(startTime);
   if (Number.isNaN(d.getTime())) return 'TBD';
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const tz = d.toLocaleTimeString([], { timeZoneName: 'short' }).split(' ').pop() ?? '';
+  return `${time} ${tz}`;
 }
 
 const TTL = {
@@ -123,23 +173,29 @@ export default function HomeScreen() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const handleSearch = useCallback(async (text: string) => {
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearch = useCallback((text: string) => {
     setSearchQuery(text);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     if (text.trim().length < 2) {
       setSearchResults([]);
       setShowDropdown(false);
+      setSearchLoading(false);
       return;
     }
-    setSearchLoading(true);
     setShowDropdown(true);
-    try {
-      const data = await searchPlayersByName(text.trim());
-      setSearchResults(data.slice(0, 6));
-    } catch {
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
+    setSearchLoading(true);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const data = await searchPlayersByName(text.trim());
+        setSearchResults(data.slice(0, 6));
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 350);
   }, []);
 
   const selectPlayer = useCallback((player: PlayerSearchResult) => {
@@ -186,6 +242,15 @@ export default function HomeScreen() {
     void loadData().finally(() => {
       if (mounted) setLoading(false);
     });
+    // Track session & prompt for review after 5 opens
+    void (async () => {
+      const { shouldPromptReview } = await trackSession();
+      if (shouldPromptReview && (await StoreReview.hasAction())) {
+        await markReviewPrompted();
+        // Small delay so the app is visually loaded first
+        setTimeout(() => void StoreReview.requestReview(), 2000);
+      }
+    })();
     return () => {
       mounted = false;
     };
@@ -215,6 +280,7 @@ export default function HomeScreen() {
   }
 
   return (
+    <>
     <ScrollView
       style={s.screen}
       contentContainerStyle={[s.content, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
@@ -241,7 +307,7 @@ export default function HomeScreen() {
             placeholder="Search any player…"
             placeholderTextColor={theme.mutedText}
             value={searchQuery}
-            onChangeText={(t) => void handleSearch(t)}
+            onChangeText={(t) => handleSearch(t)}
             style={[s.searchInput, isTablet && { fontSize: 17, paddingVertical: 14 }]}
             autoCapitalize="words"
             returnKeyType="search"
@@ -291,6 +357,9 @@ export default function HomeScreen() {
             onPress={() => void Linking.openURL(item.linkUrl)}
           >
             <View style={s.newsCardInner}>
+              {item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={s.newsImage} resizeMode="cover" />
+              ) : null}
               <View style={{ flex: 1 }}>
                 <Text style={s.newsTitle} numberOfLines={2}>{item.title}</Text>
                 <Text style={s.newsMeta}>{item.publishedAt}</Text>
@@ -453,8 +522,21 @@ export default function HomeScreen() {
           <Text style={s.emptyText}>No games scheduled for today</Text>
         </View>
       )}
+
+      {/* ── Support Link ───────────────────────────────────────── */}
+      <Pressable
+        style={({ pressed }) => [s.supportLink, pressed && s.pressed]}
+        onPress={() => router.push('/support')}
+      >
+        <Ionicons name="heart-outline" size={16} color={theme.accent} />
+        <Text style={s.supportLinkText}>Support Diamond Stats</Text>
+        <Ionicons name="chevron-forward" size={14} color={theme.mutedText} />
+      </Pressable>
+
       </View>{/* end maxContentWidth wrapper */}
     </ScrollView>
+    <AdBanner />
+    </>
   );
 }
 
@@ -584,6 +666,7 @@ const s = StyleSheet.create({
     ...shadows.glass,
   },
   newsCardInner: { flexDirection: 'row', alignItems: 'center' },
+  newsImage: { width: 60, height: 60, borderRadius: radii.sm, marginRight: 10, backgroundColor: theme.glass },
   newsTitle: { color: theme.text, fontSize: 15, fontWeight: '700', lineHeight: 20 },
   newsMeta: { color: theme.mutedText, fontSize: 12, marginTop: 4 },
 
@@ -661,5 +744,21 @@ const s = StyleSheet.create({
     color: '#16A34A',
     fontWeight: '700',
     fontSize: 12,
+  },
+
+  /* Support link */
+  supportLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  supportLinkText: {
+    color: theme.mutedText,
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

@@ -5,6 +5,7 @@ export interface PlayerSearchResult {
   fullName: string;
   position: string;
   teamName: string;
+  active: boolean;
 }
 
 export interface MlbNewsItem {
@@ -12,6 +13,7 @@ export interface MlbNewsItem {
   title: string;
   publishedAt: string;
   linkUrl: string;
+  imageUrl: string | null;
 }
 
 export interface StandingRow {
@@ -33,6 +35,8 @@ export interface StandingRow {
   runsAllowed: number;
   runDiff: number;
   divisionRank: number;
+  wildCardGamesBack: string;
+  wildCardRank: number;
 }
 
 export interface TodayGame {
@@ -56,6 +60,33 @@ export interface InningLine {
   homeRuns: number | null;
 }
 
+export interface BatterLine {
+  playerId: number;
+  name: string;
+  position: string;
+  ab: number;
+  r: number;
+  h: number;
+  rbi: number;
+  bb: number;
+  so: number;
+  avg: string;
+  battingOrder: string;
+}
+
+export interface PitcherLine {
+  playerId: number;
+  name: string;
+  ip: string;
+  h: number;
+  r: number;
+  er: number;
+  bb: number;
+  so: number;
+  era: string;
+  decision: string;
+}
+
 export interface BoxScoreSummary {
   gamePk: number;
   awayTeam: string;
@@ -70,6 +101,13 @@ export interface BoxScoreSummary {
   inning: number | null;
   inningState: string;
   inningLines: InningLine[];
+  awayBatters: BatterLine[];
+  homeBatters: BatterLine[];
+  awayPitchers: PitcherLine[];
+  homePitchers: PitcherLine[];
+  winningPitcher: string;
+  losingPitcher: string;
+  savePitcher: string;
 }
 
 export interface TeamOption {
@@ -107,6 +145,16 @@ export interface PlayerCardData {
   teamName: string;
   position: string;
   isTwoWay: boolean;
+  /** Bio info */
+  age: number | null;
+  height: string;
+  weight: number | null;
+  batSide: string;
+  throwHand: string;
+  jerseyNumber: string;
+  debutDate: string | null;
+  birthDate: string | null;
+  /** Stats */
   seasonStats: Record<string, string | number>;
   careerStats: Record<string, string | number>;
   /** Two-way players get both hitting and pitching career stats */
@@ -116,10 +164,14 @@ export interface PlayerCardData {
   seasonPitchingStats: Record<string, string | number>;
   yearByYearHitting: YearlyStatLine[];
   yearByYearPitching: YearlyStatLine[];
-  seasonWar: number | null;
-  careerWar: number | null;
+  /** Advanced sabermetrics */
+  seasonAdvancedHitting: AdvancedSabermetrics;
+  seasonAdvancedPitching: AdvancedSabermetrics;
   careerAdvancedHitting: AdvancedSabermetrics;
   careerAdvancedPitching: AdvancedSabermetrics;
+  /** Calculated metrics (FIP for pitchers, wOBA for hitters) */
+  calculatedFip: number | null;
+  calculatedWoba: number | null;
 }
 
 export interface YearlyStatLine {
@@ -156,6 +208,7 @@ export async function searchPlayersByName(name: string): Promise<PlayerSearchRes
       fullName: String(person.fullName ?? 'Unknown Player'),
       position: String(primaryPosition.abbreviation ?? 'N/A'),
       teamName: String(currentTeam.name ?? 'Free Agent'),
+      active: Boolean(person.active ?? false),
     };
   });
 
@@ -178,6 +231,7 @@ export async function searchPlayersByName(name: string): Promise<PlayerSearchRes
           ...player,
           position: String(primaryPosition.abbreviation ?? player.position),
           teamName: String(currentTeam.name ?? player.teamName),
+          active: Boolean(person.active ?? player.active),
         };
       } catch (_error) {
         return player;
@@ -200,11 +254,17 @@ export async function fetchMlbNews(): Promise<MlbNewsItem[]> {
       const linkUrl = item.match(/<link>(.*?)<\/link>/)?.[1] ?? 'https://www.mlb.com/news';
       const pubDate = pubDateRaw ? new Date(pubDateRaw).toLocaleDateString() : 'Today';
 
+      // Try to extract image from media:content or description
+      const mediaUrl = item.match(/<media:content[^>]+url="([^"]+)"/)?.[1] ?? null;
+      const descImg = item.match(/<description>[\s\S]*?<img[^>]+src="([^"]+)"[\s\S]*?<\/description>/)?.[1] ?? null;
+      const imageUrl = mediaUrl ?? descImg;
+
       return {
         id: `rss-${index}-${title}`,
         title,
         publishedAt: pubDate,
         linkUrl,
+        imageUrl,
       };
     });
 
@@ -221,12 +281,14 @@ export async function fetchMlbNews(): Promise<MlbNewsItem[]> {
       title: 'Spring training coverage coming soon from MLB feeds.',
       publishedAt: 'Today',
       linkUrl: 'https://www.mlb.com/news',
+      imageUrl: null,
     },
     {
       id: 'fallback-2',
       title: 'Use standings and roster sections while waiting for opening day stats.',
       publishedAt: 'Today',
       linkUrl: 'https://www.mlb.com/news',
+      imageUrl: null,
     },
   ];
 }
@@ -293,6 +355,8 @@ export async function fetchStandings(): Promise<StandingRow[]> {
         runsAllowed: Number(teamRecord.runsAllowed ?? 0),
         runDiff: Number(teamRecord.runDifferential ?? 0),
         divisionRank: Number(teamRecord.divisionRank ?? 99),
+        wildCardGamesBack: String(teamRecord.wildCardGamesBack ?? '-'),
+        wildCardRank: Number(teamRecord.wildCardRank ?? 99),
       });
     });
   });
@@ -368,6 +432,73 @@ export async function fetchGameBoxScore(gamePk: number): Promise<BoxScoreSummary
     };
   });
 
+  // Extract batting and pitching lines from boxscore
+  const boxscore = (liveData.boxscore as Record<string, unknown> | undefined) ?? {};
+  const bsTeams = (boxscore.teams as Record<string, unknown> | undefined) ?? {};
+
+  function extractPlayerLines(side: 'away' | 'home'): { batters: BatterLine[]; pitchers: PitcherLine[] } {
+    const teamBox = (bsTeams[side] as Record<string, unknown> | undefined) ?? {};
+    const batterIds = (teamBox.batters as number[] | undefined) ?? [];
+    const pitcherIds = (teamBox.pitchers as number[] | undefined) ?? [];
+    const players = (teamBox.players as Record<string, Record<string, unknown>> | undefined) ?? {};
+
+    const batters: BatterLine[] = [];
+    for (const pid of batterIds) {
+      const p = players[`ID${pid}`] ?? {};
+      const person = (p.person as Record<string, unknown> | undefined) ?? {};
+      const pos = (p.position as Record<string, unknown> | undefined) ?? {};
+      const batting = ((p.stats as Record<string, unknown> | undefined)?.batting as Record<string, unknown> | undefined) ?? {};
+      const order = String(p.battingOrder ?? '');
+      if (order) {
+        batters.push({
+          playerId: Number(person.id ?? pid),
+          name: String(person.fullName ?? `Player ${pid}`),
+          position: String(pos.abbreviation ?? ''),
+          ab: Number(batting.atBats ?? 0),
+          r: Number(batting.runs ?? 0),
+          h: Number(batting.hits ?? 0),
+          rbi: Number(batting.rbi ?? 0),
+          bb: Number(batting.baseOnBalls ?? 0),
+          so: Number(batting.strikeOuts ?? 0),
+          avg: String(batting.avg ?? '.000'),
+          battingOrder: order,
+        });
+      }
+    }
+
+    const pitchers: PitcherLine[] = [];
+    for (const pid of pitcherIds) {
+      const p = players[`ID${pid}`] ?? {};
+      const person = (p.person as Record<string, unknown> | undefined) ?? {};
+      const pitching = ((p.stats as Record<string, unknown> | undefined)?.pitching as Record<string, unknown> | undefined) ?? {};
+      if (Object.keys(pitching).length > 0) {
+        pitchers.push({
+          playerId: Number(person.id ?? pid),
+          name: String(person.fullName ?? `Player ${pid}`),
+          ip: String(pitching.inningsPitched ?? '0.0'),
+          h: Number(pitching.hits ?? 0),
+          r: Number(pitching.runs ?? 0),
+          er: Number(pitching.earnedRuns ?? 0),
+          bb: Number(pitching.baseOnBalls ?? 0),
+          so: Number(pitching.strikeOuts ?? 0),
+          era: String(pitching.era ?? '-.--'),
+          decision: String(pitching.note ?? ''),
+        });
+      }
+    }
+
+    return { batters, pitchers };
+  }
+
+  const awayLines = extractPlayerLines('away');
+  const homeLines = extractPlayerLines('home');
+
+  // Extract decisions
+  const decisions = (liveData.decisions as Record<string, unknown> | undefined) ?? {};
+  const wp = (decisions.winner as Record<string, unknown> | undefined) ?? {};
+  const lp = (decisions.loser as Record<string, unknown> | undefined) ?? {};
+  const svp = (decisions.save as Record<string, unknown> | undefined) ?? {};
+
   return {
     gamePk,
     awayTeam: String(gdAway.name ?? 'Away'),
@@ -382,6 +513,13 @@ export async function fetchGameBoxScore(gamePk: number): Promise<BoxScoreSummary
     inning: typeof linescore.currentInning === 'number' ? linescore.currentInning : null,
     inningState: String(linescore.inningState ?? ''),
     inningLines,
+    awayBatters: awayLines.batters,
+    homeBatters: homeLines.batters,
+    awayPitchers: awayLines.pitchers,
+    homePitchers: homeLines.pitchers,
+    winningPitcher: String(wp.fullName ?? ''),
+    losingPitcher: String(lp.fullName ?? ''),
+    savePitcher: String(svp.fullName ?? ''),
   };
 }
 
@@ -616,12 +754,59 @@ export async function fetchPlayerCardData(playerId: number): Promise<PlayerCardD
   const seasonStats = isPitcher && !isTwoWay ? seasonPitching : seasonHitting;
   const careerStats = isPitcher && !isTwoWay ? careerPitching : careerHitting;
 
+  // Bio data from person object
+  const batSideObj = (person.batSide as Record<string, unknown> | undefined) ?? {};
+  const throwHandObj = (person.pitchHand as Record<string, unknown> | undefined) ?? {};
+
+  // Calculate FIP: ((13*HR + 3*(BB+HBP) - 2*K) / IP) + FIP_CONSTANT
+  const pitchStats = isPitcher || isTwoWay ? seasonPitching : {};
+  let calculatedFip: number | null = null;
+  if (pitchStats.inningsPitched && Number(pitchStats.inningsPitched) > 0) {
+    const ip = Number(pitchStats.inningsPitched);
+    const hrP = Number(pitchStats.homeRuns ?? 0);
+    const bbP = Number(pitchStats.baseOnBalls ?? 0);
+    const hbpP = Number(pitchStats.hitByPitch ?? 0);
+    const kP = Number(pitchStats.strikeOuts ?? 0);
+    calculatedFip = ((13 * hrP + 3 * (bbP + hbpP) - 2 * kP) / ip) + 3.10;
+    calculatedFip = Math.round(calculatedFip * 100) / 100;
+  }
+
+  // Calculate wOBA: (0.69*uBB + 0.72*HBP + 0.88*1B + 1.24*2B + 1.56*3B + 1.95*HR) / (AB+BB-IBB+SF+HBP)
+  const hitStats = !isPitcher || isTwoWay ? seasonHitting : {};
+  let calculatedWoba: number | null = null;
+  if (hitStats.atBats && Number(hitStats.atBats) > 0) {
+    const hTotal = Number(hitStats.hits ?? 0);
+    const hrH = Number(hitStats.homeRuns ?? 0);
+    const dbl = Number(hitStats.doubles ?? 0);
+    const tpl = Number(hitStats.triples ?? 0);
+    const singles = hTotal - dbl - tpl - hrH;
+    const bbH = Number(hitStats.baseOnBalls ?? 0);
+    const ibb = Number(hitStats.intentionalWalks ?? 0);
+    const hbpH = Number(hitStats.hitByPitch ?? 0);
+    const ab = Number(hitStats.atBats ?? 0);
+    const sf = Number(hitStats.sacFlies ?? 0);
+    const ubb = bbH - ibb;
+    const denom = ab + bbH - ibb + sf + hbpH;
+    if (denom > 0) {
+      calculatedWoba = (0.69 * ubb + 0.72 * hbpH + 0.88 * singles + 1.24 * dbl + 1.56 * tpl + 1.95 * hrH) / denom;
+      calculatedWoba = Math.round(calculatedWoba * 1000) / 1000;
+    }
+  }
+
   return {
     id: playerId,
     fullName: String(person.fullName ?? 'Unknown Player'),
     teamName: String(currentTeam.name ?? 'N/A'),
     position: posAbbrev,
     isTwoWay,
+    age: typeof person.currentAge === 'number' ? person.currentAge : null,
+    height: String(person.height ?? ''),
+    weight: typeof person.weight === 'number' ? person.weight : null,
+    batSide: String(batSideObj.code ?? ''),
+    throwHand: String(throwHandObj.code ?? ''),
+    jerseyNumber: String(person.primaryNumber ?? ''),
+    debutDate: person.mlbDebutDate ? String(person.mlbDebutDate) : null,
+    birthDate: person.birthDate ? String(person.birthDate) : null,
     seasonStats,
     careerStats,
     careerHittingStats: careerHitting,
@@ -630,10 +815,12 @@ export async function fetchPlayerCardData(playerId: number): Promise<PlayerCardD
     seasonPitchingStats: seasonPitching,
     yearByYearHitting: pickYearByYear(stats, 'hitting'),
     yearByYearPitching: pickYearByYear(stats, 'pitching'),
-    seasonWar: extractWar(stats, 'seasonAdvanced', season),
-    careerWar: extractWar(stats, 'careerAdvanced'),
+    seasonAdvancedHitting: extractSabermetrics(stats, 'seasonAdvanced', 'hitting', season),
+    seasonAdvancedPitching: extractSabermetrics(stats, 'seasonAdvanced', 'pitching', season),
     careerAdvancedHitting: extractSabermetrics(stats, 'careerAdvanced', 'hitting'),
     careerAdvancedPitching: extractSabermetrics(stats, 'careerAdvanced', 'pitching'),
+    calculatedFip,
+    calculatedWoba,
   };
 }
 

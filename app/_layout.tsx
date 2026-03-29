@@ -27,6 +27,7 @@ export default function RootLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="player/[playerId]" options={{ title: 'Player Card', headerBackTitle: 'Back' }} />
       <Stack.Screen name="game/[gamePk]" options={{ title: 'Box Score', headerBackTitle: 'Back' }} />
+      <Stack.Screen name="support" options={{ title: 'Support', headerBackTitle: 'Back' }} />
     </Stack>
   );
 }

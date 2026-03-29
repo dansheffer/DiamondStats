@@ -105,7 +105,14 @@ export default function SearchTab() {
             }
           >
             <View style={styles.resultInfo}>
-              <Text style={styles.resultName}>{player.fullName}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.resultName}>{player.fullName}</Text>
+                {!player.active && (
+                  <View style={styles.retiredBadge}>
+                    <Text style={styles.retiredBadgeText}>Historical</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.resultMeta}>
                 {player.position} • {player.teamName}
               </Text>
@@ -185,6 +192,18 @@ const styles = StyleSheet.create({
   resultName: { color: theme.text, fontWeight: '800', fontSize: 16 },
   resultMeta: { color: theme.mutedText, fontSize: 13, marginTop: 2 },
   openLabel: { color: theme.accent, fontWeight: '800', fontSize: 14 },
+
+  retiredBadge: {
+    backgroundColor: 'rgba(10, 42, 102, 0.08)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  retiredBadgeText: {
+    color: theme.mutedText,
+    fontSize: 10,
+    fontWeight: '700',
+  },
 
   emptyCard: {
     backgroundColor: theme.surface,

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -74,6 +75,7 @@ export default function StandingsTab() {
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<'division' | 'wildcard'>('division');
 
   const loadData = useCallback(async (skipCache = false) => {
     try {
@@ -164,12 +166,18 @@ export default function StandingsTab() {
       <View style={[styles.surface, maxContentWidth ? { maxWidth: maxContentWidth, width: '100%' } : undefined]}>
         {/* Tab header */}
         <View style={styles.topTabs}>
-          <View style={[styles.topTab, styles.topTabActive]}>
-            <Text style={[styles.topTabText, styles.topTabTextActive]}>Divisional</Text>
-          </View>
-          <View style={styles.topTab}>
-            <Text style={styles.topTabText}>Wild Card</Text>
-          </View>
+          <Pressable
+            style={[styles.topTab, viewMode === 'division' && styles.topTabActive]}
+            onPress={() => setViewMode('division')}
+          >
+            <Text style={[styles.topTabText, viewMode === 'division' && styles.topTabTextActive]}>Divisional</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.topTab, viewMode === 'wildcard' && styles.topTabActive]}
+            onPress={() => setViewMode('wildcard')}
+          >
+            <Text style={[styles.topTabText, viewMode === 'wildcard' && styles.topTabTextActive]}>Wild Card</Text>
+          </Pressable>
         </View>
 
         {isPreSeason && (
@@ -183,7 +191,58 @@ export default function StandingsTab() {
           </View>
         )}
 
-        {standingsByLeague.map((leagueBlock) => (
+        {/* ── Wild Card View ──────────────────────────────────── */}
+        {viewMode === 'wildcard' && standingsByLeague.map((leagueBlock) => {
+          // Flatten all teams in this league, sort by wildcard rank
+          const allTeams = leagueBlock.divisions.flatMap((d) => d.rows);
+          // Division leaders (rank 1) are separate
+          const divLeaders = allTeams.filter((r) => r.divisionRank === 1).sort((a, b) => a.divisionName.localeCompare(b.divisionName));
+          const wcContenders = allTeams.filter((r) => r.divisionRank > 1).sort((a, b) => a.wildCardRank - b.wildCardRank);
+
+          return (
+            <View key={`wc-${leagueBlock.league}`}>
+              <View style={styles.leagueHeaderRow}>
+                <Text style={[styles.leagueHeaderText, isTablet && { fontSize: 24 * fontScale }]}>{leagueBlock.league}</Text>
+              </View>
+              {/* Division Leaders */}
+              <View style={{ paddingHorizontal: 12, paddingTop: 4, paddingBottom: 2 }}>
+                <Text style={[styles.divLabel, { marginBottom: 6 }]}>DIVISION LEADERS</Text>
+              </View>
+              {divLeaders.map((row) => (
+                <View key={row.id} style={styles.teamRow}>
+                  <View style={[styles.teamCol, isTablet && { width: 160 }]}>
+                    <TeamLogo teamId={row.teamId} abbrev={row.teamAbbrev} size={isTablet ? 36 : 30} />
+                    <View>
+                      <Text style={[styles.teamAbbrev, isTablet && { fontSize: 16 }]}>{row.teamAbbrev}</Text>
+                      <Text style={{ color: theme.mutedText, fontSize: 10 }}>{row.divisionName}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.stat, isTablet && { width: 48, fontSize: 15 }]}>{row.wins}-{row.losses}</Text>
+                  <Text style={[styles.statBold, { width: 50 }, isTablet && { fontSize: 15 }]}>{row.winPct}</Text>
+                </View>
+              ))}
+              {/* Wild Card Contenders */}
+              <View style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 2 }}>
+                <Text style={[styles.divLabel, { marginBottom: 6 }]}>WILD CARD RACE</Text>
+              </View>
+              {wcContenders.map((row, idx) => (
+                <View key={row.id} style={[styles.teamRow, idx < 3 && { backgroundColor: 'rgba(22, 163, 74, 0.04)' }]}>
+                  <View style={[styles.teamCol, isTablet && { width: 160 }]}>
+                    <TeamLogo teamId={row.teamId} abbrev={row.teamAbbrev} size={isTablet ? 36 : 30} />
+                    <Text style={[styles.teamAbbrev, isTablet && { fontSize: 16 }]}>{row.teamAbbrev}</Text>
+                    {idx < 3 && <View style={styles.wcBadge}><Text style={styles.wcBadgeText}>WC{idx + 1}</Text></View>}
+                  </View>
+                  <Text style={[styles.stat, isTablet && { width: 48, fontSize: 15 }]}>{row.wins}-{row.losses}</Text>
+                  <Text style={[styles.statBold, { width: 50 }, isTablet && { fontSize: 15 }]}>{row.winPct}</Text>
+                  <Text style={[styles.stat, { width: 50 }, isTablet && { fontSize: 15 }]}>{row.wildCardGamesBack === '-' ? 'WC1' : `${row.wildCardGamesBack} GB`}</Text>
+                </View>
+              ))}
+            </View>
+          );
+        })}
+
+        {/* ── Divisional View ────────────────────────────────── */}
+        {viewMode === 'division' && standingsByLeague.map((leagueBlock) => (
           <View key={leagueBlock.league}>
             <View style={styles.leagueHeaderRow}>
               <Text style={[styles.leagueHeaderText, isTablet && { fontSize: 24 * fontScale }]}>{leagueBlock.league}</Text>
@@ -356,5 +415,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  wcBadge: {
+    backgroundColor: 'rgba(22, 163, 74, 0.12)',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    marginLeft: 6,
+  },
+  wcBadgeText: {
+    color: '#16A34A',
+    fontSize: 9,
+    fontWeight: '800',
   },
 });

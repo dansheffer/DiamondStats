@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import PlayerAvatar from '../../src/components/PlayerAvatar';
 import { fetchPlayerCardData, type AdvancedSabermetrics, type PlayerCardData } from '../../src/api/mlb';
 import { theme, shadows, radii } from '../../src/theme/colors';
@@ -53,41 +54,35 @@ export default function PlayerCardScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playerData, setPlayerData] = useState<PlayerCardData | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadPlayer = async (showSpinner = true) => {
+    if (!playerId) {
+      setError('Missing player id.');
+      setLoading(false);
+      return;
+    }
+    if (showSpinner) setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchPlayerCardData(Number(playerId));
+      setPlayerData(data);
+    } catch {
+      setError('Could not load player stats right now.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadPlayer = async () => {
-      if (!playerId) {
-        setError('Missing player id.');
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchPlayerCardData(Number(playerId));
-        if (mounted) {
-          setPlayerData(data);
-        }
-      } catch (_error) {
-        if (mounted) {
-          setError('Could not load player stats right now.');
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
     void loadPlayer();
-
-    return () => {
-      mounted = false;
-    };
   }, [playerId]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    void loadPlayer(false);
+  };
 
   const resolvedName = playerData?.fullName ?? (typeof name === 'string' ? name : 'Player');
   const resolvedTeam = playerData?.teamName ?? (typeof team === 'string' ? team : 'N/A');
@@ -136,8 +131,22 @@ export default function PlayerCardScreen() {
   const yearSummaryKeys = (isPitcher && !isTwoWay) ? PITCHING_YEAR_SUMMARY_KEYS : HITTING_YEAR_SUMMARY_KEYS;
   const seasonHasData = seasonRows.length > 0;
 
+  // Bio helper
+  const batThrowLabel = useMemo(() => {
+    if (!playerData) return '';
+    const b = playerData.batSide === 'L' ? 'Left' : playerData.batSide === 'R' ? 'Right' : playerData.batSide === 'S' ? 'Switch' : '';
+    const t = playerData.throwHand === 'L' ? 'Left' : playerData.throwHand === 'R' ? 'Right' : '';
+    if (b && t) return `Bats: ${b} / Throws: ${t}`;
+    if (b) return `Bats: ${b}`;
+    if (t) return `Throws: ${t}`;
+    return '';
+  }, [playerData]);
+
   return (
-    <ScrollView contentContainerStyle={[styles.container, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}>
+    <ScrollView
+      contentContainerStyle={[styles.container, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+    >
       <View style={[styles.cardFrame, maxContentWidth ? { maxWidth: maxContentWidth, width: '100%' } : undefined]}>
         <View style={styles.cardRibbon}>
           <Text style={styles.cardRibbonText}>DIAMOND STATS PLAYER CARD</Text>
@@ -150,15 +159,42 @@ export default function PlayerCardScreen() {
             <Text style={[styles.playerName, isTablet && { fontSize: 30 }]}>{resolvedName}</Text>
             <Text style={[styles.playerMeta, isTablet && { fontSize: 16 }]}>
               {resolvedPosition} • {resolvedTeam}
+              {playerData?.jerseyNumber ? ` • #${playerData.jerseyNumber}` : ''}
             </Text>
           </View>
         </View>
 
         {loading ? <ActivityIndicator color={theme.primary} style={styles.loader} /> : null}
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? (
+          <View style={{ alignItems: 'center', gap: 8 }}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable onPress={() => void loadPlayer()} style={styles.retryBtn}>
+              <Text style={styles.retryText}>Tap to Retry</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
-        {!loading && !error ? (
+        {!loading && !error && playerData ? (
           <>
+            {/* ── Bio Info ─────────────────────────────────────── */}
+            <View style={styles.bioCard}>
+              {playerData.age ? (
+                <BioItem icon="person" value={String(playerData.age)} />
+              ) : null}
+              {playerData.height ? (
+                <BioItem icon="resize" value={playerData.height} />
+              ) : null}
+              {playerData.weight ? (
+                <BioItem icon="fitness" value={`${playerData.weight} lbs`} />
+              ) : null}
+              {batThrowLabel ? (
+                <BioItem icon="hand-left" value={batThrowLabel} />
+              ) : null}
+              {playerData.debutDate ? (
+                <BioItem icon="calendar" value={new Date(playerData.debutDate + 'T12:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })} />
+              ) : null}
+            </View>
+
             {/* ── Season Stats ─────────────────────────────────── */}
             {isTwoWay ? (
               <>
@@ -227,15 +263,52 @@ export default function PlayerCardScreen() {
               </Section>
             )}
 
-            {/* ── Advanced Sabermetrics ────────────────────────── */}
-            {playerData?.careerAdvancedHitting && hasAnySabermetric(playerData.careerAdvancedHitting) && (
-              <Section title="Advanced Sabermetrics • Hitting">
+            {/* ── Calculated Advanced Metrics (FIP / wOBA) ─────── */}
+            {(playerData.calculatedFip !== null || playerData.calculatedWoba !== null) && (
+              <Section title={`${currentYear} Calculated Metrics`}>
+                <View style={styles.calcMetricsRow}>
+                  {playerData.calculatedWoba !== null && (
+                    <View style={styles.calcMetricCell}>
+                      <Text style={styles.calcMetricValue}>{playerData.calculatedWoba.toFixed(3)}</Text>
+                      <Text style={styles.calcMetricLabel}>wOBA</Text>
+                      <Text style={styles.calcMetricDesc}>Weighted On-Base Average</Text>
+                    </View>
+                  )}
+                  {playerData.calculatedFip !== null && (
+                    <View style={styles.calcMetricCell}>
+                      <Text style={styles.calcMetricValue}>{playerData.calculatedFip.toFixed(2)}</Text>
+                      <Text style={styles.calcMetricLabel}>FIP</Text>
+                      <Text style={styles.calcMetricDesc}>Fielding Independent Pitching</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.saberNote}>Calculated from {currentYear} season box stats using standard formulas</Text>
+              </Section>
+            )}
+
+            {/* ── Season Advanced Sabermetrics ─────────────────── */}
+            {playerData.seasonAdvancedHitting && hasAnySabermetric(playerData.seasonAdvancedHitting) && (
+              <Section title={`${currentYear} Advanced • Hitting`}>
+                <SabermetricGrid stats={playerData.seasonAdvancedHitting} type="hitting" cols={saberCols} />
+                <Text style={styles.saberNote}>{currentYear} season advanced metrics</Text>
+              </Section>
+            )}
+            {playerData.seasonAdvancedPitching && hasAnySabermetric(playerData.seasonAdvancedPitching) && (
+              <Section title={`${currentYear} Advanced • Pitching`}>
+                <SabermetricGrid stats={playerData.seasonAdvancedPitching} type="pitching" cols={saberCols} />
+                <Text style={styles.saberNote}>{currentYear} season advanced metrics</Text>
+              </Section>
+            )}
+
+            {/* ── Career Advanced Sabermetrics ─────────────────── */}
+            {playerData.careerAdvancedHitting && hasAnySabermetric(playerData.careerAdvancedHitting) && (
+              <Section title="Career Advanced • Hitting">
                 <SabermetricGrid stats={playerData.careerAdvancedHitting} type="hitting" cols={saberCols} />
                 <Text style={styles.saberNote}>Career advanced metrics via MLB Stats API</Text>
               </Section>
             )}
-            {playerData?.careerAdvancedPitching && hasAnySabermetric(playerData.careerAdvancedPitching) && (
-              <Section title={isTwoWay ? 'Advanced Sabermetrics • Pitching' : 'Advanced Sabermetrics'}>
+            {playerData.careerAdvancedPitching && hasAnySabermetric(playerData.careerAdvancedPitching) && (
+              <Section title={isTwoWay ? 'Career Advanced • Pitching' : 'Career Advanced Sabermetrics'}>
                 <SabermetricGrid stats={playerData.careerAdvancedPitching} type="pitching" cols={saberCols} />
                 <Text style={styles.saberNote}>Career advanced metrics via MLB Stats API</Text>
               </Section>
@@ -290,29 +363,6 @@ export default function PlayerCardScreen() {
                 ))}
               </Section>
             )}
-
-            {/* ── WAR Stats ────────────────────────────────────── */}
-            <Section title="WAR Stats">
-              <StatRow
-                label="Season WAR"
-                value={
-                  playerData?.seasonWar !== null && playerData?.seasonWar !== undefined
-                    ? playerData.seasonWar.toFixed(1)
-                    : seasonHasData ? 'Pending' : 'Pre-Season'
-                }
-              />
-              <StatRow
-                label="Career WAR"
-                value={
-                  playerData?.careerWar !== null && playerData?.careerWar !== undefined
-                    ? playerData.careerWar.toFixed(1)
-                    : 'N/A'
-                }
-              />
-              <Text style={styles.warNote}>
-                WAR is not directly provided by the MLB Stats API. Values shown when available from the feed.
-              </Text>
-            </Section>
           </>
         ) : null}
         </View>
@@ -321,19 +371,35 @@ export default function PlayerCardScreen() {
   );
 }
 
+/* ── Helper Components ───────────────────────────────────────────── */
+
+function BioItem({ icon, value }: { icon: string; value: string }) {
+  const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+    person: 'person-outline',
+    resize: 'resize-outline',
+    fitness: 'fitness-outline',
+    'hand-left': 'hand-left-outline',
+    calendar: 'calendar-outline',
+  };
+  return (
+    <View style={styles.bioItem}>
+      <Ionicons name={iconMap[icon] ?? 'ellipse-outline'} size={14} color={theme.accent} />
+      <Text style={styles.bioValue}>{value}</Text>
+    </View>
+  );
+}
+
 function buildRows(
   stats: Record<string, string | number>,
   keys: Array<{ key: string; label: string }>,
 ): Array<{ label: string; value: string | number }> {
   const rows: Array<{ label: string; value: string | number }> = [];
-
   keys.forEach((item) => {
     const value = stats[item.key];
     if (typeof value === 'string' || typeof value === 'number') {
       rows.push({ label: item.label, value });
     }
   });
-
   return rows;
 }
 
@@ -364,7 +430,6 @@ function PreSeasonNote({ year }: { year: number }) {
       <Text style={styles.preSeasonTitle}>{year} Season Has Not Started</Text>
       <Text style={styles.preSeasonText}>
         Regular season stats will appear here once the {year} MLB season begins.
-        Spring Training is underway!
       </Text>
     </View>
   );
@@ -418,11 +483,11 @@ function SabermetricGrid({ stats, type, cols = 2 }: { stats: AdvancedSabermetric
 }
 
 function formatStatValue(value: string | number | undefined): string {
-  if (value === undefined || value === null || value === '') {
-    return '—';
-  }
+  if (value === undefined || value === null || value === '') return '—';
   return String(value);
 }
+
+/* ── Styles ──────────────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
   container: {
@@ -486,6 +551,30 @@ const styles = StyleSheet.create({
     color: theme.error,
     fontWeight: '700',
   },
+
+  /* Bio card */
+  bioCard: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    backgroundColor: theme.glass,
+    borderRadius: radii.md,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.glassBorder,
+  },
+  bioItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  bioValue: {
+    color: theme.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  /* Sections */
   section: {
     borderRadius: radii.md,
     overflow: 'hidden',
@@ -509,6 +598,41 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: theme.glass,
   },
+
+  /* Calculated metrics */
+  calcMetricsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  calcMetricCell: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 106, 19, 0.06)',
+    borderRadius: radii.sm,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 106, 19, 0.15)',
+  },
+  calcMetricValue: {
+    color: theme.accent,
+    fontWeight: '900',
+    fontSize: 22,
+  },
+  calcMetricLabel: {
+    color: theme.primary,
+    fontWeight: '800',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  calcMetricDesc: {
+    color: theme.mutedText,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  /* Year-by-year */
   yearRow: {
     borderWidth: 1,
     borderColor: theme.glassBorder,
@@ -549,6 +673,8 @@ const styles = StyleSheet.create({
     color: theme.text,
     fontWeight: '800',
   },
+
+  /* Stat rows */
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -566,11 +692,8 @@ const styles = StyleSheet.create({
     color: theme.mutedText,
     fontStyle: 'italic',
   },
-  warNote: {
-    color: theme.mutedText,
-    fontSize: 12,
-    marginTop: 2,
-  },
+
+  /* Pre-season */
   preSeasonBox: {
     alignItems: 'center',
     paddingVertical: 8,
@@ -591,6 +714,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+
+  /* Sabermetrics */
   saberGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -625,5 +750,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontStyle: 'italic',
     marginTop: 4,
+  },
+
+  /* Retry */
+  retryBtn: {
+    backgroundColor: theme.primary,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: radii.sm,
+  },
+  retryText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 14,
   },
 });

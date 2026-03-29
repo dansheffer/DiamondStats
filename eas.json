@@ -18,7 +18,19 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "buildConfiguration": "Release"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "dsheffer10@icloud.com",
+        "ascAppId": "FILL_AFTER_CREATING_APP_IN_ASC",
+        "appleTeamId": "Z3LQY2KV6L"
+      }
     }
   }
 }
