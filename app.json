@@ -33,13 +33,7 @@
     },
     "scheme": "diamondstats",
     "plugins": [
-      "expo-router",
-      [
-        "react-native-google-mobile-ads",
-        {
-          "iosAppId": "ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY"
-        }
-      ]
+      "expo-router"
     ],
     "extra": {
       "router": {
