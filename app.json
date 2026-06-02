@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Diamond Stats",
+    "name": "Diamond Stats Pro",
     "slug": "diamond-stats",
-    "version": "1.0.0",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#002D72"
     },
     "assetBundlePatterns": [
@@ -16,21 +16,35 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.diamondstats.app"
+      "bundleIdentifier": "com.dsheffer.diamondstats1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#002D72"
       },
       "package": "com.diamondstats.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "scheme": "diamondstats",
     "plugins": [
-      "expo-router"
-    ]
+      "expo-router",
+      "expo-sharing",
+      "expo-font"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "9ea8a430-5263-4917-ab7e-cf88992e2b2f"
+      }
+    },
+    "owner": "dansheffer"
   }
 }

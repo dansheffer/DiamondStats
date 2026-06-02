@@ -1,0 +1,31 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "EAS Build iOS Production",
+			"type": "shell",
+			"command": "EAS_NO_VCS=1 EAS_BUILD_NO_EXPO_GO_WARNING=true npx eas-cli build --platform ios --profile production --non-interactive --no-wait",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "EAS Build iOS Production v3",
+			"type": "shell",
+			"command": "EAS_NO_VCS=1 EAS_BUILD_NO_EXPO_GO_WARNING=true npx eas-cli build --platform ios --profile production --non-interactive --no-wait",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "EAS Build iOS Production v4",
+			"type": "shell",
+			"command": "EAS_NO_VCS=1 EAS_BUILD_NO_EXPO_GO_WARNING=true npx eas-cli build --platform ios --profile production --non-interactive --no-wait",
+			"isBackground": false
+		},
+		{
+			"label": "EAS Build iOS Production v5 SDK55",
+			"type": "shell",
+			"command": "EAS_NO_VCS=1 EAS_BUILD_NO_EXPO_GO_WARNING=true npx eas-cli build --platform ios --profile production --non-interactive --no-wait",
+			"isBackground": false
+		}
+	]
+}

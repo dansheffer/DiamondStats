@@ -1,0 +1,40 @@
+{
+  "cli": {
+    "version": ">= 18.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "image": "latest",
+        "buildConfiguration": "Release"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "dsheffer10@icloud.com",
+        "ascAppId": "6762099221",
+        "appleTeamId": "Z3LQY2KV6L",
+        "ascApiKeyPath": "./keys/AuthKey_4DMFU7ZX24.p8",
+        "ascApiKeyId": "4DMFU7ZX24",
+        "ascApiKeyIssuerId": "deda6503-60f8-4de7-b11e-f5f4e6fdea7a"
+      }
+    }
+  }
+}

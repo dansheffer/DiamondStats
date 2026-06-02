@@ -1,0 +1,26 @@
+# Maestro smoke test — replicates Apple's exact reviewer flow on the iPad.
+# Run with:  maestro test .maestro/smoke.yaml
+# Or via simulator:  MAESTRO_DRIVER_STARTUP_TIMEOUT=120 maestro test .maestro/smoke.yaml
+appId: com.dsheffer.diamondstats1
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Diamond Stats"
+- assertVisible: "16 players"
+- assertVisible: "Juan Soto"
+- tapOn: "Search players, teams, positions"
+- inputText: "judge"
+- assertVisible: "Aaron Judge"
+- assertNotVisible: "Juan Soto"
+- tapOn: "Aaron Judge"
+- assertVisible: "Career WAR"
+- assertVisible: "Season WAR"
+- assertVisible: "Career Value"
+- assertVisible: "If this pace continues"
+- back
+- assertVisible: "Diamond Stats"
+- tapOn: "Search players, teams, positions"
+- eraseText
+- inputText: "Mets"
+- assertVisible: "Juan Soto"
+- assertVisible: "Francisco Lindor"

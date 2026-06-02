@@ -58,3 +58,17 @@ web-build/
 
 # TypeScript
 *.tsbuildinfo
+
+# Python / generated local state
+__pycache__/
+*.pyc
+*.log
+*.state
+
+# Apple / App Store Connect API keys
+keys/
+*.p8
+
+# Local secrets
+.env
+.env.*

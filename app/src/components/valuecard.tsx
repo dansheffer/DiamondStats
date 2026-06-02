@@ -1,5 +1,4 @@
 // ValueCard component: Displays player WAR stats, dollar values, and projections
-// Styled with Mets branding (blue for headings, orange for highlights)
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
@@ -21,7 +20,7 @@ interface ValueCardProps {
 // Convert WAR to dollar value
 // Assumption: $9M per WAR (market standard)
 const WAR_TO_DOLLARS = 9_000_000;
-// Full MLB season length
+// Full season length
 const FULL_SEASON_GAMES = 162;
 
 const ValueCard: React.FC<ValueCardProps> = ({
@@ -52,11 +51,10 @@ const ValueCard: React.FC<ValueCardProps> = ({
   };
 
   // Determine trend color
-  // Rising trend uses Mets orange as an accent highlight
   const getTrendColor = (trend: string): string => {
     switch (trend) {
       case 'Rising':
-        return theme.accent; // Mets orange
+        return theme.accent;
       case 'Declining':
         return '#ef4444';
       default:
@@ -110,7 +108,7 @@ const ValueCard: React.FC<ValueCardProps> = ({
           </View>
         </View>
 
-        {/* Trend Badge - Uses Mets orange for Rising */}
+        {/* Trend Badge */}
         <View style={styles.trendContainer}>
           <View
             style={[
@@ -152,11 +150,8 @@ const ValueCard: React.FC<ValueCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: theme.background,
-    justifyContent: 'center',
+    width: '100%',
     alignItems: 'center',
-    padding: 20,
   },
   card: {
     backgroundColor: theme.card,
@@ -186,7 +181,7 @@ const styles = StyleSheet.create({
   playerName: {
     fontSize: 24,
     fontWeight: '700',
-    color: theme.primary, // Mets blue
+    color: theme.primary,
     marginBottom: 4,
   },
   playerInfo: {
@@ -209,7 +204,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 16,
-    color: theme.primary, // Mets blue for labels
+    color: theme.primary,
     fontWeight: '500',
   },
   statValue: {

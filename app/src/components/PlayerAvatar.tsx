@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { theme } from '../theme/colors';
 
@@ -7,20 +7,40 @@ interface PlayerAvatarProps {
   size?: number;
 }
 
-const PlayerAvatar: React.FC<PlayerAvatarProps> = ({ mlbId, size = 60 }) => {
-  const [imageError, setImageError] = useState(false);
+const PLACEHOLDER = require('../../../assets/player-placeholder.png');
+const TIMEOUT_MS = 4000; // fall back to placeholder after 4 s
 
-  // Generate MLB headshot URL
-  // MLB provides headshots at: https://img.mlbstatic.com/mlb-photos/image/upload/w_213,q_auto:best,f_auto/v1/people/{mlbId}/headshot/67/current
+const PlayerAvatar: React.FC<PlayerAvatarProps> = ({ mlbId, size = 60 }) => {
+  const [useFallback, setUseFallback] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!mlbId) {
+      setUseFallback(true);
+      return;
+    }
+    // Start a timeout — if the image hasn't loaded/errored by TIMEOUT_MS, show placeholder
+    timerRef.current = setTimeout(() => setUseFallback(true), TIMEOUT_MS);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [mlbId]);
+
   const headshotUrl = mlbId
     ? `https://img.mlbstatic.com/mlb-photos/image/upload/w_213,q_auto:best,f_auto/v1/people/${mlbId}/headshot/67/current`
     : null;
 
-  // Fallback to placeholder if mlbId is missing or image fails to load
   const imageSrc =
-    headshotUrl && !imageError
-      ? { uri: headshotUrl }
-      : require('../../../assets/player-placeholder.png');
+    headshotUrl && !useFallback ? { uri: headshotUrl } : PLACEHOLDER;
+
+  const handleLoad = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  };
+
+  const handleError = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setUseFallback(true);
+  };
 
   return (
     <View
@@ -43,7 +63,9 @@ const PlayerAvatar: React.FC<PlayerAvatarProps> = ({ mlbId, size = 60 }) => {
             borderRadius: size / 2,
           },
         ]}
-        onError={() => setImageError(true)}
+        defaultSource={PLACEHOLDER}
+        onLoad={handleLoad}
+        onError={handleError}
       />
     </View>
   );

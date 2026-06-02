@@ -1,6 +1,8 @@
-// Mets brand colors
-export const METS_BLUE = '#002D72';
-export const METS_ORANGE = '#FF5910';
+// Brand palette (generic, Mets-inspired — not affiliated with any team)
+export const BRAND_NAVY = '#002D72';   // Mets royal blue
+export const BRAND_AMBER = '#FF5910';  // Mets orange
+export const BRAND_NAVY_DARK = '#001F52';
+export const BRAND_NAVY_LIGHT = '#1B4FA8';
 
 // Application theme
 export const theme = {
@@ -9,6 +11,8 @@ export const theme = {
   mutedText: '#6b7280',
   card: '#ffffff',
   border: '#e5e7eb',
-  primary: METS_BLUE,
-  accent: METS_ORANGE,
+  primary: BRAND_NAVY,
+  primaryDark: BRAND_NAVY_DARK,
+  primaryLight: BRAND_NAVY_LIGHT,
+  accent: BRAND_AMBER,
 };
