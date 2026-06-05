@@ -49,14 +49,26 @@ interface PeopleResponse {
   people?: MlbPersonLite[];
 }
 
+const MLB_TEAM_IDS = new Set([
+  108, 109, 110, 111, 112, 113, 114, 115, 116, 117,
+  118, 119, 120, 121, 133, 134, 135, 136, 137, 138,
+  139, 140, 141, 142, 143, 144, 145, 146, 147, 158,
+]);
+
+function isActiveMlbPlayer(person: MlbPersonLite): boolean {
+  if (person.active === false) return false;
+  const teamId = person.currentTeam?.id;
+  return teamId == null || MLB_TEAM_IDS.has(teamId);
+}
+
 export async function searchPlayers(query: string): Promise<MlbPersonLite[]> {
   const q = query.trim();
   if (q.length < 2) return [];
   const data = await getJSON<PeopleResponse>(
-    `/people/search?names=${encodeURIComponent(q)}&hydrate=currentTeam,primaryPosition`,
+    `/people/search?names=${encodeURIComponent(q)}&sportId=1&active=true&hydrate=currentTeam,primaryPosition`,
     5 * 60_000,
   );
-  return (data.people ?? []).slice(0, 50);
+  return (data.people ?? []).filter(isActiveMlbPlayer).slice(0, 50);
 }
 
 export async function getPerson(personId: number): Promise<MlbPersonLite | null> {
