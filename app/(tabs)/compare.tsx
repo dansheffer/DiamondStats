@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -13,6 +14,7 @@ import {
 import { Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   getPerson,
   getPlayerCareerStats,
@@ -402,6 +404,7 @@ export default function CompareScreen() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const searchToken = useRef(0);
+  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -434,6 +437,12 @@ export default function CompareScreen() {
       cancelled = true;
     };
   }, [rightMlbId]);
+
+  useEffect(() => {
+    if (!selecting) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 250);
+    return () => clearTimeout(timer);
+  }, [selecting]);
 
   useEffect(() => {
     if (!selecting) return;
@@ -494,83 +503,93 @@ export default function CompareScreen() {
           options={{
             title: selecting === 'left' ? 'Swap left player' : 'Swap right player',
             headerLargeTitle: false,
-            headerTransparent: Platform.OS === 'ios',
-            headerBlurEffect: 'systemChromeMaterial',
+            headerTransparent: false,
+            headerStyle: { backgroundColor: '#f2f2f7' },
             headerLargeStyle: { backgroundColor: '#f2f2f7' },
           }}
         />
-        <View style={styles.pickerScreen}>
-          <View style={styles.searchWrap}>
-            <View style={styles.searchBar}>
-              {Platform.OS === 'ios' && (
-                <SymbolView name="magnifyingglass" tintColor="#8e8e93" size={18} />
-              )}
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search any MLB player"
-                placeholderTextColor="#8e8e93"
-                autoCapitalize="words"
-                autoCorrect={false}
-                clearButtonMode="while-editing"
-                returnKeyType="search"
-                style={styles.searchInput}
-              />
+        <SafeAreaView style={styles.pickerScreen} edges={['top', 'bottom']}>
+          <KeyboardAvoidingView
+            style={styles.pickerFlex}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={styles.searchWrap}>
+              <View style={styles.searchBar}>
+                {Platform.OS === 'ios' && (
+                  <SymbolView name="magnifyingglass" tintColor="#8e8e93" size={18} />
+                )}
+                <TextInput
+                  ref={inputRef}
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search any MLB player"
+                  placeholderTextColor="#8e8e93"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoFocus
+                  clearButtonMode="while-editing"
+                  returnKeyType="search"
+                  selectionColor={theme.primary}
+                  showSoftInputOnFocus
+                  style={styles.searchInput}
+                />
+              </View>
             </View>
-          </View>
-          <FlatList
-            data={query.trim().length >= 2 ? results : []}
-            keyExtractor={(item) => String(item.id)}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.pickerList}
-            ListHeaderComponent={
-              query.trim().length < 2 ? (
-                <View style={styles.featuredBlock}>
-                  <Text style={styles.featuredTitle}>Featured starters</Text>
-                  {PLAYERS.map((p) => (
-                    <PickerRow
-                      key={p.id}
-                      mlbId={p.mlbId}
-                      name={p.name}
-                      meta={`${p.position} - ${p.team}`}
-                      onPress={() => choose(p.mlbId)}
-                    />
-                  ))}
-                </View>
-              ) : null
-            }
-            ListEmptyComponent={
-              query.trim().length >= 2 ? (
-                <View style={styles.emptyPicker}>
-                  {searching ? (
-                    <>
-                      <ActivityIndicator />
-                      <Text style={styles.emptyHint}>Searching player index...</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.emptyTitle}>
-                        {searchError ? 'Search unavailable' : 'No players found'}
-                      </Text>
-                      <Text style={styles.emptyHint}>{searchError ?? 'Try another spelling.'}</Text>
-                    </>
-                  )}
-                </View>
-              ) : null
-            }
-            renderItem={({ item }) => (
-              <PickerRow
-                mlbId={item.id}
-                name={item.fullName}
-                meta={`${item.primaryPosition?.abbreviation ?? '--'} - ${item.currentTeam?.name ?? 'Free Agent'}`}
-                onPress={() => choose(item.id)}
-              />
-            )}
-          />
-          <Pressable onPress={() => setSelecting(null)} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </Pressable>
-        </View>
+            <FlatList
+              data={query.trim().length >= 2 ? results : []}
+              keyExtractor={(item) => String(item.id)}
+              keyboardShouldPersistTaps="always"
+              keyboardDismissMode="interactive"
+              contentContainerStyle={styles.pickerList}
+              ListHeaderComponent={
+                query.trim().length < 2 ? (
+                  <View style={styles.featuredBlock}>
+                    <Text style={styles.featuredTitle}>Featured starters</Text>
+                    {PLAYERS.map((p) => (
+                      <PickerRow
+                        key={p.id}
+                        mlbId={p.mlbId}
+                        name={p.name}
+                        meta={`${p.position} - ${p.team}`}
+                        onPress={() => choose(p.mlbId)}
+                      />
+                    ))}
+                  </View>
+                ) : null
+              }
+              ListEmptyComponent={
+                query.trim().length >= 2 ? (
+                  <View style={styles.emptyPicker}>
+                    {searching ? (
+                      <>
+                        <ActivityIndicator />
+                        <Text style={styles.emptyHint}>Searching player index...</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.emptyTitle}>
+                          {searchError ? 'Search unavailable' : 'No players found'}
+                        </Text>
+                        <Text style={styles.emptyHint}>{searchError ?? 'Try another spelling.'}</Text>
+                      </>
+                    )}
+                  </View>
+                ) : null
+              }
+              renderItem={({ item }) => (
+                <PickerRow
+                  mlbId={item.id}
+                  name={item.fullName}
+                  meta={`${item.primaryPosition?.abbreviation ?? '--'} - ${item.currentTeam?.name ?? 'Free Agent'}`}
+                  onPress={() => choose(item.id)}
+                />
+              )}
+            />
+            <Pressable onPress={() => setSelecting(null)} style={styles.cancelButton}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </>
     );
   }
@@ -867,7 +886,8 @@ const styles = StyleSheet.create({
   statWinner: { color: '#34c759' },
   footnote: { marginTop: 14, fontSize: 11, color: '#6b7280', textAlign: 'center', lineHeight: 16 },
   pickerScreen: { flex: 1, backgroundColor: '#f2f2f7' },
-  searchWrap: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8 },
+  pickerFlex: { flex: 1 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, zIndex: 2 },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
