@@ -17,8 +17,8 @@ import {
   getTodaysGames,
   DivisionStandings,
   ScheduleGame,
-} from '../src/api/mlb';
-import { theme } from '../src/theme/colors';
+} from '../../shared/api/mlb';
+import { theme } from '../../shared/theme/colors';
 
 type Mode = 'standings' | 'games';
 

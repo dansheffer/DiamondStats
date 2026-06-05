@@ -93,6 +93,7 @@ export default function TabsLayout() {
         name="compare"
         options={{
           title: 'Compare',
+          tabBarLabel: 'Comp',
           tabBarIcon: ({ color, focused }) =>
             Platform.OS === 'ios' ? (
               <SymbolView
@@ -107,6 +108,7 @@ export default function TabsLayout() {
         name="calculator"
         options={{
           title: 'Calculator',
+          tabBarLabel: 'Calc',
           tabBarIcon: ({ color, focused }) =>
             Platform.OS === 'ios' ? (
               <SymbolView
@@ -121,6 +123,7 @@ export default function TabsLayout() {
         name="about"
         options={{
           title: 'About',
+          tabBarLabel: 'Info',
           tabBarIcon: ({ color, focused }) =>
             Platform.OS === 'ios' ? (
               <SymbolView
@@ -129,6 +132,18 @@ export default function TabsLayout() {
                 size={26}
               />
             ) : null,
+        }}
+      />
+      <Tabs.Screen
+        name="myteam"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="standings"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

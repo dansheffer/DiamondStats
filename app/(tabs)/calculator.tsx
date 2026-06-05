@@ -12,7 +12,7 @@ import {
 import { Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import { theme } from '../src/theme/colors';
+import { theme } from '../../shared/theme/colors';
 
 /**
  * Player Value Calculator

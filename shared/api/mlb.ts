@@ -53,7 +53,7 @@ export async function searchPlayers(query: string): Promise<MlbPersonLite[]> {
   const q = query.trim();
   if (q.length < 2) return [];
   const data = await getJSON<PeopleResponse>(
-    `/people/search?names=${encodeURIComponent(q)}&active=true&hydrate=currentTeam,primaryPosition`,
+    `/people/search?names=${encodeURIComponent(q)}&hydrate=currentTeam,primaryPosition`,
     5 * 60_000,
   );
   return (data.people ?? []).slice(0, 50);
@@ -74,19 +74,31 @@ export interface SeasonStatLine {
   group: 'hitting' | 'pitching' | 'fielding';
   team?: string;
   gamesPlayed?: number;
+  gamesStarted?: number;
+  plateAppearances?: number;
+  atBats?: number;
   avg?: string;
   hits?: number;
+  doubles?: number;
+  triples?: number;
   homeRuns?: number;
   rbi?: number;
+  runs?: number;
+  baseOnBalls?: number;
   obp?: string;
   slg?: string;
   ops?: string;
+  stolenBases?: number;
+  caughtStealing?: number;
   era?: string;
   wins?: number;
   losses?: number;
   strikeOuts?: number;
+  baseOnBallsPitching?: number;
   inningsPitched?: string;
   whip?: string;
+  saves?: number;
+  holds?: number;
 }
 
 interface StatsResponse {
@@ -144,19 +156,31 @@ async function fetchStatLines(path: string, ttl: number): Promise<SeasonStatLine
         group,
         team: split.team?.name,
         gamesPlayed: s.gamesPlayed as number | undefined,
+        gamesStarted: s.gamesStarted as number | undefined,
+        plateAppearances: s.plateAppearances as number | undefined,
+        atBats: s.atBats as number | undefined,
         avg: s.avg as string | undefined,
         hits: s.hits as number | undefined,
+        doubles: s.doubles as number | undefined,
+        triples: s.triples as number | undefined,
         homeRuns: s.homeRuns as number | undefined,
         rbi: s.rbi as number | undefined,
+        runs: s.runs as number | undefined,
+        baseOnBalls: s.baseOnBalls as number | undefined,
         obp: s.obp as string | undefined,
         slg: s.slg as string | undefined,
         ops: s.ops as string | undefined,
+        stolenBases: s.stolenBases as number | undefined,
+        caughtStealing: s.caughtStealing as number | undefined,
         era: s.era as string | undefined,
         wins: s.wins as number | undefined,
         losses: s.losses as number | undefined,
         strikeOuts: s.strikeOuts as number | undefined,
+        baseOnBallsPitching: s.baseOnBalls as number | undefined,
         inningsPitched: s.inningsPitched as string | undefined,
         whip: s.whip as string | undefined,
+        saves: s.saves as number | undefined,
+        holds: s.holds as number | undefined,
       });
     }
   }

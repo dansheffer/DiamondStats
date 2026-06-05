@@ -12,8 +12,8 @@ import { Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SymbolView, SFSymbol } from 'expo-symbols';
 import Constants from 'expo-constants';
-import { theme } from '../src/theme/colors';
-import { PLAYERS } from '../src/data/players';
+import { theme } from '../../shared/theme/colors';
+import { PLAYERS } from '../../shared/data/players';
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 

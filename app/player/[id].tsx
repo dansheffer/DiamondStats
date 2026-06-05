@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams, Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SymbolView, SFSymbol } from 'expo-symbols';
-import { findPlayer, Player } from '../src/data/players';
+import { findPlayer, Player } from '../../shared/data/players';
 import {
   getPerson,
   getPlayerSeasonStats,
@@ -20,10 +20,10 @@ import {
   getPlayerYearByYearStats,
   MlbPersonLite,
   SeasonStatLine,
-} from '../src/api/mlb';
-import { useFavorites } from '../src/storage/favorites';
-import PlayerAvatar from '../src/components/PlayerAvatar';
-import { theme } from '../src/theme/colors';
+} from '../../shared/api/mlb';
+import { useFavorites } from '../../shared/storage/favorites';
+import PlayerAvatar from '../../shared/components/PlayerAvatar';
+import { theme } from '../../shared/theme/colors';
 
 type Tab = 'season' | 'career' | 'years';
 
@@ -59,6 +59,22 @@ interface ViewPlayer {
   team: string;
   position: string;
   curated?: Player;
+}
+
+function briefBio(view: ViewPlayer, person?: MlbPersonLite | null): string {
+  const basics = `${view.name} is a ${view.position} for ${view.team}.`;
+  const bats = person?.batSide?.description ? `Bats ${person.batSide.description.toLowerCase()}` : null;
+  const throws = person?.pitchHand?.description ? `throws ${person.pitchHand.description.toLowerCase()}` : null;
+  const handText = [bats, throws].filter(Boolean).join(', ');
+  const birthplace = person ? formatBirthplace(person) : null;
+  const debut = person ? formatDebut(person.mlbDebutDate) : null;
+  const extras = [
+    handText || null,
+    birthplace ? `born in ${birthplace}` : null,
+    debut ? `debuted ${debut}` : null,
+  ].filter(Boolean);
+
+  return extras.length ? `${basics} ${extras.join('; ')}.` : basics;
 }
 
 export default function PlayerDetailScreen() {
@@ -293,6 +309,7 @@ export default function PlayerDetailScreen() {
               <Text style={styles.liveText}>Live Stats</Text>
             </View>
           )}
+          <Text style={styles.heroBio}>{briefBio(view, livePerson)}</Text>
         </View>
 
         {(view.curated || (isLive && hasAnyCareer)) && (
@@ -327,7 +344,7 @@ export default function PlayerDetailScreen() {
           </View>
         )}
 
-        {livePerson && <BioCard person={livePerson} />}
+        <BioCard view={view} person={livePerson} />
 
         {showYears && (
           <YearByYearTable hitting={yearsHitting} pitching={yearsPitching} />
@@ -506,17 +523,19 @@ function YearByYearTable({
   );
 }
 
-function BioCard({ person }: { person: MlbPersonLite }) {
-  const age = calcAge(person.birthDate);
-  const birthplace = formatBirthplace(person);
-  const debut = formatDebut(person.mlbDebutDate);
-  const bats = person.batSide?.description;
-  const throws = person.pitchHand?.description;
-  const height = person.height;
-  const weight = person.weight ? `${person.weight} lbs` : null;
-  const number = person.primaryNumber ? `#${person.primaryNumber}` : null;
+function BioCard({ view, person }: { view: ViewPlayer; person: MlbPersonLite | null }) {
+  const age = calcAge(person?.birthDate);
+  const birthplace = person ? formatBirthplace(person) : null;
+  const debut = formatDebut(person?.mlbDebutDate);
+  const bats = person?.batSide?.description;
+  const throws = person?.pitchHand?.description;
+  const height = person?.height;
+  const weight = person?.weight ? `${person.weight} lbs` : null;
+  const number = person?.primaryNumber ? `#${person.primaryNumber}` : null;
 
   const rows = ([
+    ['Team', view.team],
+    ['Position', view.position],
     ['Number', number],
     ['Age', age != null ? `${age} years` : null],
     ['Birthplace', birthplace],
@@ -524,8 +543,6 @@ function BioCard({ person }: { person: MlbPersonLite }) {
     ['Bats / Throws', bats && throws ? `${bats} / ${throws}` : null],
     ['MLB Debut', debut],
   ] as Array<[string, string | null]>).filter((r): r is [string, string] => !!r[1]);
-
-  if (!rows.length) return null;
 
   return (
     <View style={styles.bioCard}>
@@ -559,6 +576,13 @@ const styles = StyleSheet.create({
   },
   heroName: { marginTop: 12, fontSize: 22, fontWeight: '800', color: theme.primary },
   heroMeta: { marginTop: 4, fontSize: 14, color: '#6b7280' },
+  heroBio: {
+    marginTop: 12,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#4b5563',
+    textAlign: 'center',
+  },
   trendPill: {
     marginTop: 10,
     flexDirection: 'row',

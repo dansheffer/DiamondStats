@@ -13,8 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import { fetchNews, NewsItem } from '../src/api/mlb';
-import { theme } from '../src/theme/colors';
+import { fetchNews, NewsItem } from '../../shared/api/mlb';
+import { theme } from '../../shared/theme/colors';
 
 function relativeTime(iso: string): string {
   if (!iso) return '';

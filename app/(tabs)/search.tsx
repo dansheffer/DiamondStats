@@ -13,9 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import { searchPlayers, MlbPersonLite } from '../src/api/mlb';
-import PlayerAvatar from '../src/components/PlayerAvatar';
-import { theme } from '../src/theme/colors';
+import { searchPlayers, MlbPersonLite } from '../../shared/api/mlb';
+import PlayerAvatar from '../../shared/components/PlayerAvatar';
+import { theme } from '../../shared/theme/colors';
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
@@ -103,7 +103,7 @@ export default function SearchScreen() {
     if (query.trim().length < 2) {
       return (
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Search any active pro player</Text>
+          <Text style={styles.emptyTitle}>Search any MLB player</Text>
           <Text style={styles.emptyHint}>
             Live data from a public stats service. Try &quot;Soto&quot;, &quot;Skenes&quot;,
             or &quot;Yamamoto&quot;.
@@ -130,7 +130,7 @@ export default function SearchScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Any active pro player"
+            placeholder="Any MLB player"
             placeholderTextColor="#8e8e93"
             autoCapitalize="words"
             autoCorrect={false}

@@ -9,7 +9,7 @@
 ## App Information Tab
 
 ### Name (30 chars max)
-Diamond Stats
+Diamond Stats Pro
 
 ### Subtitle (30 chars max)
 Live MLB Scores & Sabermetrics
@@ -91,18 +91,15 @@ https://dansheffer.github.io/DiamondStats/privacy-policy.html
 ### Copyright
 © 2026 Daniel Sheffer
 
-### What's New / Release Notes (Version 1.0.0)
-Welcome to Diamond Stats! 🏟️
+### What's New / Release Notes (Version 1.6.0)
+Player cards and Compare just got a serious upgrade.
 
-• Live scores for every MLB game, updated in real time
-• Full box scores with individual batting & pitching lines
-• 10,000+ player cards with bio, season stats, and career breakdowns
-• Advanced sabermetrics: FIP, wOBA, BABIP, ISO, K%, and more
-• Divisional standings and live Wild Card race tracker
-• My Team personalized dashboard
-• MLB news with images
-• 55+ baseball trivia facts
-• Beautifully designed for both iPhone and iPad
+• Search and swap any MLB player into Compare
+• New head-to-head stats: OPS, OBP, SLG, ISO, HR pace, XBH, BB%, K%, and more
+• Pitcher comparisons now include ERA, WHIP, K/9, BB/9, K/BB, innings, and decisions
+• Player cards now include a cleaner bio summary with team, position, bats/throws, debut, and birthplace when available
+• Compare falls back from current-season stats to career totals when needed
+• Cleaner App Store screenshots and updated player-stat presentation
 
 ---
 

@@ -7,7 +7,7 @@ interface PlayerAvatarProps {
   size?: number;
 }
 
-const PLACEHOLDER = require('../../../assets/player-placeholder.png');
+const PLACEHOLDER = require('../../assets/player-placeholder.png');
 const TIMEOUT_MS = 4000; // fall back to placeholder after 4 s
 
 const PlayerAvatar: React.FC<PlayerAvatarProps> = ({ mlbId, size = 60 }) => {

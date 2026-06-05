@@ -192,7 +192,7 @@ def screen_calculator(size, scale, verdict="bargain"):
 
 
 def screen_search(size, scale):
-    img, d, top = base_canvas(size, "Search active pros", "Live results, zero ads", scale)
+    img, d, top = base_canvas(size, "Search any player", "Live MLB player lookup", scale)
     w, h = size
     margin = int(80 * scale)
     card_x = margin
@@ -203,15 +203,15 @@ def screen_search(size, scale):
     sb_h = int(130 * scale)
     rounded_rect(d, (card_x, card_y, card_x + card_w, card_y + sb_h), int(30 * scale), fill=WHITE)
     sfnt = font(int(48 * scale))
-    d.text((card_x + int(50 * scale), card_y + int(38 * scale)), "🔍  skenes", font=sfnt, fill=INK)
+    d.text((card_x + int(50 * scale), card_y + int(38 * scale)), "Search: skenes", font=sfnt, fill=INK)
 
     # Result rows
     rows = [
-        ("Paul Skenes", "RHP  ·  Age 24"),
-        ("Jared Jones", "RHP  ·  Age 24"),
-        ("Mitch Keller", "RHP  ·  Age 30"),
-        ("Bailey Falter", "LHP  ·  Age 29"),
-        ("Quinn Priester", "RHP  ·  Age 25"),
+        ("Paul Skenes", "RHP  ·  Pittsburgh"),
+        ("Tarik Skubal", "LHP  ·  Detroit"),
+        ("Shohei Ohtani", "DH  ·  Los Angeles"),
+        ("Aaron Judge", "RF  ·  New York"),
+        ("Bobby Witt Jr.", "SS  ·  Kansas City"),
     ]
     y = card_y + sb_h + int(40 * scale)
     rh = int(180 * scale)
@@ -231,12 +231,12 @@ def screen_search(size, scale):
         d.text((ax + ar + int(40 * scale), y + int(40 * scale)), name, font=name_f, fill=INK)
         d.text((ax + ar + int(40 * scale), y + int(110 * scale)), sub, font=sub_f, fill=GRAY)
         y += rh
-    draw_footer(d, w, size[1], scale, "Search any active pro player")
+    draw_footer(d, w, size[1], scale, "Swap any player into Compare")
     return img
 
 
 def screen_player_detail(size, scale):
-    img, d, top = base_canvas(size, "WAR in dollars", "Per-player surplus, instantly", scale)
+    img, d, top = base_canvas(size, "Richer player cards", "Bio, season, career, and pace", scale)
     w, h = size
     margin = int(80 * scale)
     card_x = margin
@@ -256,19 +256,20 @@ def screen_player_detail(size, scale):
 
     nx = ax + ar + int(50 * scale)
     d.text((nx, ay + int(20 * scale)), "Paul Skenes", font=font(int(78 * scale), bold=True), fill=INK)
-    d.text((nx, ay + int(120 * scale)), "RHP  ·  Age 24", font=font(int(46 * scale)), fill=GRAY)
-    rounded_rect(d, (nx, ay + int(190 * scale), nx + int(220 * scale), ay + int(260 * scale)), int(20 * scale), fill=AMBER)
-    d.text((nx + int(40 * scale), ay + int(200 * scale)), "★  FAVORITE", font=font(int(32 * scale), bold=True), fill=NAVY)
+    d.text((nx, ay + int(112 * scale)), "RHP  ·  Pittsburgh", font=font(int(46 * scale)), fill=GRAY)
+    d.text((nx, ay + int(175 * scale)), "Throws R  ·  MLB debut May 2024", font=font(int(34 * scale)), fill=GRAY)
+    rounded_rect(d, (nx, ay + int(235 * scale), nx + int(260 * scale), ay + int(305 * scale)), int(20 * scale), fill=AMBER)
+    d.text((nx + int(40 * scale), ay + int(245 * scale)), "★  FAVORITE", font=font(int(32 * scale), bold=True), fill=NAVY)
 
     # Stat grid
     sy = card_y + int(420 * scale)
     grid = [
         ("ERA", "1.94"),
-        ("W–L", "12 – 4"),
         ("WHIP", "0.96"),
-        ("K", "188"),
+        ("K/9", "10.4"),
+        ("K/BB", "5.8"),
         ("IP", "162.0"),
-        ("WAR", "5.4"),
+        ("G", "27"),
     ]
     cols = 3
     cw = card_w // cols
@@ -280,17 +281,17 @@ def screen_player_detail(size, scale):
         d.text((cx + int(50 * scale), cy + int(40 * scale)), k, font=font(int(40 * scale)), fill=GRAY)
         d.text((cx + int(50 * scale), cy + int(95 * scale)), v, font=font(int(80 * scale), bold=True), fill=INK)
 
-    # Value bar
+    # Bio / insight bar
     vy = sy + 2 * rh + int(40 * scale)
     rounded_rect(d, (card_x, vy, card_x + card_w, vy + int(280 * scale)), int(36 * scale), fill=NAVY)
-    text_centered(d, "Open-Market Value @ $9M/WAR", vy + int(40 * scale), w, font(int(40 * scale)), fill=(200, 215, 245))
-    text_centered(d, "$48.6M", vy + int(110 * scale), w, font(int(140 * scale), bold=True), fill=AMBER)
-    draw_footer(d, w, h, scale, "Tap any player to see their dollar value")
+    text_centered(d, "Player Bio + Season Snapshot", vy + int(42 * scale), w, font(int(42 * scale)), fill=(200, 215, 245))
+    text_centered(d, "Career, season, and year-by-year stats", vy + int(120 * scale), w, font(int(62 * scale), bold=True), fill=AMBER)
+    draw_footer(d, w, h, scale, "Open any player from Search or Compare")
     return img
 
 
 def screen_compare(size, scale):
-    img, d, top = base_canvas(size, "Head to head", "Side-by-side, winner highlighted", scale)
+    img, d, top = base_canvas(size, "Compare anyone", "OPS, ISO, BB%, K%, pitching rates", scale)
     w, h = size
     margin = int(80 * scale)
     card_x = margin
@@ -300,8 +301,8 @@ def screen_compare(size, scale):
     # Two player headers
     half = (card_w - int(40 * scale)) // 2
     for i, (name, sub, accent) in enumerate([
-        ("J. Soto", "OF  ·  Age 27", NAVY),
-        ("A. Judge", "OF  ·  Age 33", AMBER),
+        ("J. Soto", "RF  ·  Mets", NAVY),
+        ("A. Judge", "RF  ·  Yankees", AMBER),
     ]):
         x = card_x + i * (half + int(40 * scale))
         rounded_rect(d, (x, card_y, x + half, card_y + int(300 * scale)), int(40 * scale), fill=WHITE)
@@ -318,12 +319,13 @@ def screen_compare(size, scale):
     # Stat rows
     sy = card_y + int(360 * scale)
     rows = [
-        ("AVG", "0.288", "0.265", 0),
-        ("HR",  "31",    "37",    1),
-        ("RBI", "92",    "104",   1),
-        ("OPS", "0.945", "0.972", 1),
-        ("WAR", "5.1",   "6.4",   1),
-        ("$M",  "$45.9", "$57.6", 1),
+        ("OPS",  ".945", "1.012", 1),
+        ("OBP",  ".421", ".404",  0),
+        ("ISO",  ".276", ".338",  1),
+        ("HR",   "31",   "44",    1),
+        ("BB%",  "17.8", "15.1",  0),
+        ("K%",   "16.5", "24.8",  0),
+        ("XBH",  "62",   "71",    1),
     ]
     rh = int(170 * scale)
     for k, vL, vR, winner in rows:
@@ -380,7 +382,7 @@ def screen_live(size, scale):
 
 
 def screen_features(size, scale):
-    img, d, top = base_canvas(size, "Built for fans", "No ads. No login. No tracking.", scale)
+    img, d, top = base_canvas(size, "Built for fans", "Fast box scores and deeper cards", scale)
     w, h = size
     margin = int(80 * scale)
     card_x = margin
@@ -388,12 +390,12 @@ def screen_features(size, scale):
     card_w = w - 2 * margin
 
     items = [
-        ("$",  "WAR-to-Dollars Calculator",  "Custom $/WAR rate"),
-        ("⚖",  "Head-to-Head Comparator",    "Winner-highlighted stats"),
+        ("⌕",  "Any-Player Search",          "Live MLB player lookup"),
+        ("⚖",  "Head-to-Head Compare",       "OPS, ISO, BB%, K%, K/BB"),
         ("◎",  "Live Scores & Standings",    "Refresh on demand"),
-        ("★",  "Favorites",                   "One-tap watchlist"),
+        ("★",  "Player Bios",                "Bio, debut, bats/throws"),
         ("⌬",  "iPhone & iPad",              "Native, optimized UI"),
-        ("✓",  "Privacy-First",              "Zero analytics, zero ads"),
+        ("✓",  "Clean Baseball UI",          "Fast, focused, fan-friendly"),
     ]
     rh = int(280 * scale)
     y = card_y

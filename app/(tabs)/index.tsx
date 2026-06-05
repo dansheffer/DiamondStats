@@ -16,10 +16,10 @@ import { router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import { PLAYERS, Player } from '../src/data/players';
-import { theme } from '../src/theme/colors';
-import PlayerAvatar from '../src/components/PlayerAvatar';
-import { useFavorites } from '../src/storage/favorites';
+import { PLAYERS, Player } from '../../shared/data/players';
+import { theme } from '../../shared/theme/colors';
+import PlayerAvatar from '../../shared/components/PlayerAvatar';
+import { useFavorites } from '../../shared/storage/favorites';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -161,7 +161,7 @@ export default function PlayersScreen() {
         <Text style={styles.headerSub}>{filtered.length} of {PLAYERS.length}</Text>
       </View>
       <Text style={styles.headerCaption}>
-        Curated elite — the top WAR leaders this season. Use Search for any active MLB player.
+        Curated elite — the top WAR leaders this season. Use Search for any MLB player.
       </Text>
 
       <View style={styles.searchWrap}>

@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { theme } from './src/theme/colors';
+import { theme } from '../shared/theme/colors';
 
 export default function RootLayout() {
   return (
