@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { fetchGameBoxScore, type BatterLine, type BoxScoreSummary, type PitcherLine } from '../../src/api/mlb';
 import { theme, shadows, radii } from '../../src/theme/colors';
 import { useResponsive } from '../../src/utils/useResponsive';
@@ -53,11 +53,17 @@ export default function GameBoxScoreScreen() {
   const { isTablet, maxContentWidth, outerPadding } = useResponsive();
 
   return (
-    <ScrollView
-      contentContainerStyle={[styles.container, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
-    >
-      <View style={maxContentWidth ? { maxWidth: maxContentWidth, width: '100%', gap: 12 } : { gap: 12 }}>
+    <>
+      <Stack.Screen
+        options={{
+          title: box ? `${box.awayTeam} at ${box.homeTeam}` : 'Game Details',
+        }}
+      />
+      <ScrollView
+        contentContainerStyle={[styles.container, { padding: outerPadding, alignItems: isTablet ? 'center' : undefined }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+      >
+        <View style={maxContentWidth ? { maxWidth: maxContentWidth, width: '100%', gap: 12 } : { gap: 12 }}>
         {/* Score Card */}
         <View style={styles.digitalCard}>
           {loading ? <ActivityIndicator color="#67e8f9" /> : null}
@@ -179,8 +185,9 @@ export default function GameBoxScoreScreen() {
             }
           />
         ) : null}
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </>
   );
 }
 

@@ -9,10 +9,10 @@
 ## App Information Tab
 
 ### Name (30 chars max)
-Diamond Stats Pro
+Diamond Stats MLB Scores
 
 ### Subtitle (30 chars max)
-Live MLB Scores & Sabermetrics
+Baseball Stats & Box Scores
 
 ### Category
 Primary: Sports
@@ -32,14 +32,14 @@ Free
 ## Version Information Tab
 
 ### Promotional Text (170 chars — can update anytime, no review needed)
-The 2026 MLB season is here! Track every game with live scores, full box scores, advanced sabermetrics, and 10,000+ player cards. 100% free. ⚾
+Game Day upgrade: restore My Team, tap today's MLB games for box scores, see start times, probable pitchers, and filter Top Players by position.
 
 ### Description (4000 chars max — copy everything below this line)
 
 Diamond Stats is the ultimate free baseball companion — live MLB scores, full box scores, deep player stats, and the advanced sabermetrics that front offices actually use. No account required. No paywall. Just baseball.
 
 ▸ LIVE SCORES & BOX SCORES
-Track every MLB game in real time. See scores, innings, and game status at a glance. Tap any game for a complete box score with individual batting and pitching lines, including H, R, RBI, HR, ERA, K, BB, and more. Winning pitcher, losing pitcher, and save decisions are highlighted instantly.
+Track every MLB game in real time. See scores, innings, start times, game status, and probable pitchers when available. Tap any game for a complete box score with individual batting and pitching lines, including H, R, RBI, HR, ERA, K, BB, and more. Winning pitcher, losing pitcher, and save decisions are highlighted instantly.
 
 ▸ PLAYER CARDS — 10,000+ PLAYERS
 Search any active or historical MLB player by name. Each player card includes:
@@ -60,8 +60,11 @@ These are the same analytics used by MLB front offices to evaluate talent.
 ▸ STANDINGS & WILD CARD RACE
 Full divisional standings with W-L, PCT, Games Back, home/away splits, run differential, last 10 games, and current streak. Switch to the Wild Card tab for a live look at the WC race with clinch scenarios and elimination numbers.
 
+▸ TOP PLAYERS BY POSITION
+Browse a curated Top Players board, sort by WAR, follow rising stars, filter your favorites, and narrow the leaderboard by C, 1B, 2B, 3B, SS, OF, or DH.
+
 ▸ MY TEAM
-Pick your favorite team and get a personalized dashboard with your team's schedule, recent results, and quick-tap access to upcoming games.
+Pick your favorite MLB team and get a personalized dashboard with your team's record, roster, schedule, recent results, next game, and quick-tap access to game detail.
 
 ▸ LATEST MLB NEWS
 Stay current with headlines pulled directly from official MLB sources, complete with images. Tap any story to read the full article.
@@ -77,7 +80,7 @@ Diamond Stats is and always will be free. If you love the app, an optional tip j
 Data provided by the MLB Stats API. Diamond Stats is not affiliated with or endorsed by Major League Baseball.
 
 ### Keywords (100 chars max — comma-separated, no spaces after commas)
-baseball,mlb,scores,stats,sabermetrics,standings,box score,fip,woba,player,live,fantasy,analytics
+standings,fantasy,players,pitching,batting,war,woba,fip,rosters,teams,sabermetrics,live
 
 ### Support URL
 https://dansheffer.github.io/DiamondStats/support.html
@@ -91,15 +94,15 @@ https://dansheffer.github.io/DiamondStats/privacy-policy.html
 ### Copyright
 © 2026 Daniel Sheffer
 
-### What's New / Release Notes (Version 1.6.0)
-Player cards and Compare just got a serious upgrade.
+### What's New / Release Notes (Version 1.7.0)
+Game Day polish for baseball season.
 
-• Search and swap any MLB player into Compare
-• New head-to-head stats: OPS, OBP, SLG, ISO, HR pace, XBH, BB%, K%, and more
-• Pitcher comparisons now include ERA, WHIP, K/9, BB/9, K/BB, innings, and decisions
-• Player cards now include a cleaner bio summary with team, position, bats/throws, debut, and birthplace when available
-• Compare falls back from current-season stats to career totals when needed
-• Cleaner App Store screenshots and updated player-stat presentation
+• My Team is back in the tab bar with favorite team, record, roster, next game, and latest result
+• Today's Games are now tappable and open full game detail / box scores
+• Game cards now show scheduled start time and probable pitchers when available
+• Top Players now has position filters for C, 1B, 2B, 3B, SS, OF, and DH
+• Game detail headers now show the actual matchup instead of a route variable
+• Focused performance and UI polish without adding bloat
 
 ---
 

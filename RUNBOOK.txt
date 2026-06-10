@@ -396,6 +396,10 @@ Base URL: https://statsapi.mlb.com/api/v1
 11. KEY FILES & WHAT THEY DO
 ================================================================================
 
+  docs/RELEASE_SOP.md
+    └── Step-by-step release checklist for QA, ASO metadata, EAS build,
+        App Store submit, TestFlight, and GitHub.
+
   app/src/api/mlb.ts
     ├── THE core file. All MLB API calls live here.
     ├── fetchSchedule()          → Today's games

@@ -271,6 +271,8 @@ export interface ScheduleGame {
   awayScore?: number;
   startTimeUtc: string;
   inning?: string;
+  homeProbablePitcher?: string;
+  awayProbablePitcher?: string;
 }
 
 interface ScheduleResponse {
@@ -279,8 +281,8 @@ interface ScheduleResponse {
       gamePk: number;
       status: { abstractGameState: string; detailedState: string };
       teams: {
-        home: { team: { name: string }; score?: number };
-        away: { team: { name: string }; score?: number };
+        home: { team: { name: string }; score?: number; probablePitcher?: { fullName?: string } };
+        away: { team: { name: string }; score?: number; probablePitcher?: { fullName?: string } };
       };
       gameDate: string;
       linescore?: { currentInningOrdinal?: string; inningState?: string };
@@ -330,7 +332,7 @@ export async function getTodaysGames(): Promise<ScheduleGame[]> {
   const dd = String(today.getDate()).padStart(2, '0');
   const date = `${yyyy}-${mm}-${dd}`;
   const data = await getJSON<ScheduleResponse>(
-    `/schedule?sportId=1&date=${date}&hydrate=linescore`,
+    `/schedule?sportId=1&date=${date}&hydrate=linescore,probablePitcher`,
     30_000,
   );
   const games: ScheduleGame[] = [];
@@ -349,6 +351,8 @@ export async function getTodaysGames(): Promise<ScheduleGame[]> {
         awayScore: g.teams.away.score,
         startTimeUtc: g.gameDate,
         inning: inningPart,
+        homeProbablePitcher: g.teams.home.probablePitcher?.fullName,
+        awayProbablePitcher: g.teams.away.probablePitcher?.fullName,
       });
     }
   }

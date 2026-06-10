@@ -4,6 +4,25 @@ All notable changes to **DiamondStats** will be documented in this file.
 
 ---
 
+## [1.7.0] - 2026-06-10
+
+### Added
+- **Team tab restored** - My Team is back in the main tab bar with favorite-team selection, roster, record, next game, and last result.
+- **Top Players position filters** - Added C, 1B, 2B, 3B, SS, OF, and DH filters for quicker leaderboard scanning.
+- **Richer Today's Games cards** - Game cards now show scheduled start time and probable pitchers when available.
+- **Tappable game cards** - Today's Games now opens the full game detail / box score screen.
+- **Release SOP** - Added `docs/RELEASE_SOP.md` for repeatable QA, ASO, build, submit, and GitHub steps.
+- **ASO update script** - Added `scripts/asc_update_aso_17.py` for optimized App Store metadata.
+
+### Fixed
+- **Game detail route title** - Game detail headers now show the actual matchup instead of `game/[gamePk]`.
+
+### Changed
+- Bumped app/package version to 1.7.0.
+- Updated App Store metadata with SEO-focused name, subtitle, keywords, description, promotional text, and release notes.
+
+---
+
 ## [1.1.0] – 2026-03-19
 
 ### Bug Fixes

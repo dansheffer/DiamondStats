@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
 import {
@@ -169,8 +169,21 @@ function GamesView({ data }: { data: ScheduleGame[] }) {
       {data.map((g) => {
         const live = g.status === 'Live';
         const final = g.status === 'Final';
+        const startTime = new Date(g.startTimeUtc);
+        const startLabel = Number.isNaN(startTime.getTime())
+          ? 'Time TBD'
+          : startTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         return (
-          <View key={g.gamePk} style={styles.gameCard}>
+          <Pressable
+            key={g.gamePk}
+            style={({ pressed }) => [styles.gameCard, pressed && styles.gameCardPressed]}
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.selectionAsync().catch(() => {});
+              router.push({ pathname: '/game/[gamePk]', params: { gamePk: String(g.gamePk) } });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${g.awayTeam} at ${g.homeTeam}`}
+          >
             <View style={styles.gameTeams}>
               <Text style={styles.teamName}>{g.awayTeam}</Text>
               <Text style={styles.teamScore}>
@@ -200,7 +213,15 @@ function GamesView({ data }: { data: ScheduleGame[] }) {
                 {live && g.inning ? g.inning : g.detailedStatus}
               </Text>
             </View>
-          </View>
+            <View style={styles.gameMetaRow}>
+              <Text style={styles.gameMeta}>{startLabel}</Text>
+              {(g.awayProbablePitcher || g.homeProbablePitcher) && (
+                <Text style={styles.gameMeta} numberOfLines={1}>
+                  {g.awayProbablePitcher ?? 'TBD'} vs {g.homeProbablePitcher ?? 'TBD'}
+                </Text>
+              )}
+            </View>
+          </Pressable>
         );
       })}
     </View>
@@ -252,6 +273,7 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 6,
   },
+  gameCardPressed: { opacity: 0.65 },
   gameTeams: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -273,4 +295,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#002D7214',
   },
   statusText: { fontSize: 11, fontWeight: '700', color: theme.primary, letterSpacing: 0.4 },
+  gameMetaRow: { marginTop: 2, gap: 2 },
+  gameMeta: { fontSize: 12, fontWeight: '600', color: '#6b7280' },
 });

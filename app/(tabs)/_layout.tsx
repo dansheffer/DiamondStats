@@ -122,6 +122,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="about"
         options={{
+          href: null,
           title: 'About',
           tabBarLabel: 'Info',
           tabBarIcon: ({ color, focused }) =>
@@ -137,7 +138,15 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="myteam"
         options={{
-          href: null,
+          title: 'Team',
+          tabBarIcon: ({ color, focused }) =>
+            Platform.OS === 'ios' ? (
+              <SymbolView
+                name={focused ? 'star.circle.fill' : 'star.circle'}
+                tintColor={color}
+                size={26}
+              />
+            ) : null,
         }}
       />
       <Tabs.Screen

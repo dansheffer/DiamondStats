@@ -53,10 +53,13 @@ const CHIPS: FilterChip[] = [
   { id: 'rising',    label: 'Rising',     icon: 'arrow.up.right' },
   { id: 'favorites', label: 'Favorites',  icon: 'star.fill' },
 ];
+const POSITION_CHIPS = ['All', 'C', '1B', '2B', '3B', 'SS', 'OF', 'DH'] as const;
+type PositionChip = typeof POSITION_CHIPS[number];
 
 export default function PlayersScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterId>('all');
+  const [position, setPosition] = useState<PositionChip>('All');
   const [refreshing, setRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const { isFavorite, favs } = useFavorites();
@@ -72,6 +75,13 @@ export default function PlayersScreen() {
     let list: Player[] = PLAYERS.slice();
     if (filter === 'favorites') list = list.filter((p) => isFavorite(p.id));
     else if (filter === 'rising') list = list.filter((p) => p.trend === 'Rising');
+    if (position !== 'All') {
+      list = list.filter((p) =>
+        position === 'OF'
+          ? ['LF', 'CF', 'RF', 'OF'].includes(p.position)
+          : p.position === position,
+      );
+    }
 
     if (q) {
       list = list.filter(
@@ -82,15 +92,20 @@ export default function PlayersScreen() {
       );
     }
 
-    if (filter === 'war') {
+    if (filter === 'war' || position !== 'All') {
       list.sort((a, b) => b.seasonWAR - a.seasonWAR);
     }
     return list;
-  }, [query, filter, isFavorite, favs]);
+  }, [query, filter, position, isFavorite, favs]);
 
   const onPickChip = useCallback((id: FilterId) => {
     if (Platform.OS === 'ios') Haptics.selectionAsync().catch(() => {});
     setFilter(id);
+  }, []);
+
+  const onPickPosition = useCallback((id: PositionChip) => {
+    if (Platform.OS === 'ios') Haptics.selectionAsync().catch(() => {});
+    setPosition(id);
   }, []);
 
   const onRefresh = useCallback(() => {
@@ -213,6 +228,30 @@ export default function PlayersScreen() {
         })}
       </ScrollView>
 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.positionRow}
+      >
+        {POSITION_CHIPS.map((pos) => {
+          const active = position === pos;
+          return (
+            <Pressable
+              key={pos}
+              onPress={() => onPickPosition(pos)}
+              style={[styles.positionChip, active && styles.positionChipActive]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={pos === 'All' ? 'All positions' : `Position ${pos}`}
+            >
+              <Text style={[styles.positionChipText, active && styles.positionChipTextActive]}>
+                {pos}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
       <FlatList
         data={filtered}
         key={`cols-${numColumns}`}
@@ -267,6 +306,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 16, color: theme.text, paddingVertical: 0 },
   chipRow: { paddingHorizontal: 16, gap: 8, paddingBottom: 10 },
+  positionRow: { paddingHorizontal: 16, gap: 8, paddingBottom: 10 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,6 +324,17 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 13, fontWeight: '600', color: theme.primary },
   chipTextActive: { color: '#fff' },
+  positionChip: {
+    minWidth: 44,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 9,
+    backgroundColor: 'rgba(118,118,128,0.12)',
+  },
+  positionChipActive: { backgroundColor: theme.accent },
+  positionChipText: { fontSize: 13, fontWeight: '800', color: theme.text },
+  positionChipTextActive: { color: '#fff' },
   list: { backgroundColor: '#f2f2f7' },
   listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120 },
   columnWrapper: { gap: 12 },
